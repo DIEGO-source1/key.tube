@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import {
   Bookmark,
   Play,
@@ -145,21 +146,43 @@ export function ContentMedia({
 }) {
   const url = full?.mediaUrl || post.preview_url;
   const type = post.type || "text";
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const pixelRef = useRef<HTMLCanvasElement>(null);
+  const [previewBlocked,setPreviewBlocked]=useState(false);
+  useEffect(()=>{setPreviewBlocked(false);},[full?.mediaUrl,post.id]);
+  function pixelateAndLock(video:HTMLVideoElement){
+    if(full||post.visibility==='free'||previewBlocked)return;
+    video.pause();
+    const canvas=pixelRef.current;
+    if(canvas&&video.videoWidth&&video.videoHeight){
+      const ratio=video.videoWidth/video.videoHeight,w=Math.max(1,Math.round(video.clientWidth||640)),h=Math.max(1,Math.round(w/ratio));
+      canvas.width=w;canvas.height=h;
+      const tiny=document.createElement('canvas');tiny.width=48;tiny.height=Math.max(24,Math.round(48/ratio));
+      const t=tiny.getContext('2d'),c=canvas.getContext('2d');
+      if(t&&c){t.drawImage(video,0,0,tiny.width,tiny.height);c.imageSmoothingEnabled=false;c.drawImage(tiny,0,0,tiny.width,tiny.height,0,0,w,h);}
+    }
+    setPreviewBlocked(true);onPreviewEnd?.();
+  }
   if (type === "video")
     return (
-      <div className="kt-video-frame">
+      <div className={`kt-video-frame ${previewBlocked?'kt-preview-locked':''}`}>
         {url ? (
+          <>
           <video
+            ref={videoRef}
             key={url}
-            controls
+            controls={!previewBlocked}
             playsInline
             preload="metadata"
             poster={post.thumbnail_url}
             src={url}
             onError={onError}
-            onTimeUpdate={e => {if (!full && post.visibility !== "free" && e.currentTarget.currentTime >= 10) {e.currentTarget.pause();onPreviewEnd?.();}}}
-            onEnded={() => {if (!full && post.visibility !== "free") onPreviewEnd?.();}}
+            onTimeUpdate={e => {if (!full && post.visibility !== "free" && e.currentTarget.currentTime >= 9.8) pixelateAndLock(e.currentTarget);}}
+            onEnded={e => {if (!full && post.visibility !== "free") pixelateAndLock(e.currentTarget);}}
           />
+          <canvas ref={pixelRef} className="kt-pixelated-preview" aria-hidden="true"/>
+          {previewBlocked&&<div className="kt-pixel-lock"><LockKeyhole size={34}/><strong>Adelanto terminado</strong><span>Desbloquea el contenido para seguir viendo.</span></div>}
+          </>
         ) : (
           <div
             className="kt-media-placeholder"
@@ -174,7 +197,7 @@ export function ContentMedia({
           </div>
         )}
         <span className="kt-player-label">
-          {full ? "Contenido completo" : "Adelanto público"}
+          {full ? "Contenido completo" : previewBlocked ? "Vista bloqueada · requiere membresía" : "Adelanto gratuito · 10 segundos"}
         </span>
       </div>
     );

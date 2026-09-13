@@ -1,4 +1,5 @@
 import { getMediaStore } from "./neon-bucket";
+import { del, issueSignedToken, presignUrl } from "@vercel/blob";
 import { AppError, db, hash } from "./keytube-server";
 import type { StoredPost } from "./keytube-server";
 export type StoredAsset = {
@@ -12,6 +13,34 @@ export type StoredAsset = {
   created_at: number;
 };
 export const MAX_UPLOAD = 20 * 1024 * 1024;
+export const MAX_FULL_UPLOAD = 500 * 1024 * 1024;
+export const CREATOR_STORAGE_QUOTA = 5 * 1024 * 1024 * 1024;
+
+export function isBlobStorageKey(storageKey: string) {
+  return storageKey.startsWith("blob:");
+}
+export function blobPathname(storageKey: string) {
+  return storageKey.slice(5);
+}
+export async function deleteStorageKey(storageKey: string) {
+  if (isBlobStorageKey(storageKey)) {
+    await del(blobPathname(storageKey));
+    return;
+  }
+  await bucket().delete(storageKey);
+}
+export async function signedBlobReadUrl(storageKey: string, ttlMs = 2 * 60 * 60 * 1000) {
+  if (!isBlobStorageKey(storageKey)) throw new Error("El archivo no está en Blob.");
+  const pathname = blobPathname(storageKey);
+  const validUntil = Date.now() + ttlMs;
+  const token = await issueSignedToken({ pathname, operations: ["get"], validUntil });
+  const { presignedUrl } = await presignUrl(token, {
+    pathname,
+    operation: "get",
+    validUntil,
+  });
+  return presignedUrl;
+}
 export function bucket() {
   try {
     return getMediaStore();

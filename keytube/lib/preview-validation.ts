@@ -15,7 +15,7 @@ export function timedPreviewIsShort(bytes:Uint8Array,mime:string) {
     }
     return rate>0&&data>0&&data/rate<=10;
   }
-  if(mime!=='video/webm')return false;
+  if(mime!=='video/webm'&&mime!=='audio/webm')return false;
   let scale=1000000,blocks=0,maximum=0,operations=0;
   function vint(pos:number,keepMarker=false):{value:number;length:number;unknown:boolean}|null {
     if(pos>=bytes.length)return null;

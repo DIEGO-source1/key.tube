@@ -9,7 +9,7 @@ import {
   failure,
   AppError,
 } from "@/lib/keytube-server";
-import { getAsset, bucket } from "@/lib/media";
+import { getAsset, deleteStorageKey } from "@/lib/media";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
       try {
         const oldAsset = await getAsset(oldId);
         if (oldAsset.owner_id === user.userId && oldAsset.role === "avatar") {
-          await bucket().delete(oldAsset.storage_key);
+          await deleteStorageKey(oldAsset.storage_key);
           await db()
             .prepare("DELETE FROM assets WHERE id=? AND owner_id=?")
             .bind(oldId, user.userId)

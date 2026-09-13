@@ -8,7 +8,7 @@ import {
   failure,
   AppError,
 } from "@/lib/keytube-server";
-import { getAsset, bucket } from "@/lib/media";
+import { getAsset, deleteStorageKey } from "@/lib/media";
 export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
@@ -69,7 +69,7 @@ export async function DELETE(req: Request) {
         .first();
       if (!stillUsed) {
         await db().prepare("DELETE FROM assets WHERE id=?").bind(asset.id).run();
-        await bucket().delete(asset.storage_key);
+        await deleteStorageKey(asset.storage_key);
       }
     }
     return response({ deleted: true });

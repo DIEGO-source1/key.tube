@@ -113,8 +113,8 @@ CREATE TABLE IF NOT EXISTS assets (
 );
 CREATE INDEX IF NOT EXISTS assets_owner_idx ON assets(owner_id);
 
--- Para simplificar Vercel + Neon, los archivos se almacenan en Neon BYTEA.
--- El límite de la aplicación sigue siendo 20 MB por archivo.
+-- Adelantos, portadas y avatares pequeños pueden almacenarse en Neon BYTEA.
+-- Los archivos completos grandes (hasta 500 MB) usan Vercel Blob privado.
 CREATE TABLE IF NOT EXISTS media_objects (
   storage_key text PRIMARY KEY,
   data bytea NOT NULL,

@@ -13,19 +13,28 @@ export async function imagePreview(file:File) {
   bitmap.close();return new File([await blobFromCanvas(canvas)],'vista-previa.jpg',{type:'image/jpeg'});
 }
 export async function audioPreview(file:File) {
-  const ctx=new AudioContext();
+  if(typeof MediaRecorder==='undefined')throw new Error('Usa Chrome o Edge para preparar el adelanto del audio.');
+  const audio=document.createElement('audio');
+  const url=URL.createObjectURL(file);audio.src=url;audio.preload='auto';audio.style.display='none';document.body.appendChild(audio);
+  const ctx=new AudioContext();let recorder:MediaRecorder|undefined,timer:ReturnType<typeof setTimeout>|undefined;
   try {
-    const audio=await ctx.decodeAudioData(await file.arrayBuffer());
-    const rate=22050,seconds=Math.min(10,audio.duration*.9),length=Math.max(1,Math.floor(rate*seconds));
-    const offline=new OfflineAudioContext(1,length,rate),source=offline.createBufferSource();
-    source.buffer=audio;source.connect(offline.destination);source.start();
-    const result=await offline.startRendering(),samples=result.getChannelData(0);
-    const bytes=new ArrayBuffer(44+length*2),v=new DataView(bytes);
-    const word=(offset:number,s:string)=>[...s].forEach((c,i)=>v.setUint8(offset+i,c.charCodeAt(0)));
-    word(0,'RIFF');v.setUint32(4,36+length*2,true);word(8,'WAVE');word(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);word(36,'data');v.setUint32(40,length*2,true);
-    for(let i=0;i<length;i++)v.setInt16(44+i*2,Math.max(-1,Math.min(1,samples[i]))*32767,true);
-    return new File([bytes],'adelanto-10s.wav',{type:'audio/wav'});
-  }finally{await ctx.close();}
+    await new Promise<void>((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('El audio tardó demasiado en abrirse.')),15000);audio.onloadeddata=()=>{clearTimeout(timeout);resolve();};audio.onerror=()=>{clearTimeout(timeout);reject(new Error('El navegador no puede abrir este audio.'));};audio.load();});
+    await ctx.resume();
+    const source=ctx.createMediaElementSource(audio),dest=ctx.createMediaStreamDestination();source.connect(dest);
+    const mime=['audio/webm;codecs=opus','audio/webm'].find(x=>MediaRecorder.isTypeSupported(x));
+    if(!mime)throw new Error('Este navegador no puede generar el adelanto de audio. Usa Chrome o Edge.');
+    recorder=new MediaRecorder(dest.stream,{mimeType:mime,audioBitsPerSecond:64000});
+    const chunks:Blob[]=[];
+    const result=new Promise<Blob>((resolve,reject)=>{recorder!.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder!.onstop=()=>resolve(new Blob(chunks,{type:'audio/webm'}));recorder!.onerror=()=>reject(new Error('No se pudo preparar el adelanto del audio.'));});
+    recorder.start(200);await audio.play();
+    const cap=Math.min(9500,Math.max(1000,(Number.isFinite(audio.duration)?audio.duration*900:9500)));
+    timer=setTimeout(()=>{audio.pause();if(recorder?.state==='recording')recorder.stop();},cap);
+    audio.onended=()=>{if(recorder?.state==='recording')recorder.stop();};
+    const blob=await result;
+    return new File([blob],'adelanto-10s.webm',{type:'audio/webm'});
+  } finally {
+    if(timer)clearTimeout(timer);if(recorder?.state==='recording')recorder.stop();audio.pause();audio.remove();URL.revokeObjectURL(url);await ctx.close();
+  }
 }
 export async function videoPreview(file:File,onProgress:(seconds:number)=>void) {
   if(typeof MediaRecorder==='undefined')throw new Error('Usa Chrome o Edge para preparar el adelanto del video.');

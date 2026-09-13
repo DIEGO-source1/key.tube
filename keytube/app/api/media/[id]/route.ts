@@ -1,5 +1,5 @@
 import { getAppUser } from "@/lib/auth";
-import { getAsset, bucket } from "@/lib/media";
+import { getAsset, bucket, isBlobStorageKey, signedBlobReadUrl } from "@/lib/media";
 import {
   db,
   hash,
@@ -64,6 +64,10 @@ export async function GET(
         .first();
       if (!published)
         throw new AppError(404, "Este archivo todavía no está publicado.");
+    }
+    if (isBlobStorageKey(asset.storage_key)) {
+      const signed = await signedBlobReadUrl(asset.storage_key);
+      return Response.redirect(signed, 307);
     }
     const range = req.headers.get("range");
     let options: { offset: number; length: number } | undefined;

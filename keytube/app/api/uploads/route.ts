@@ -7,7 +7,7 @@ import {
   failure,
   AppError,
 } from "@/lib/keytube-server";
-import { bucket, MAX_UPLOAD, validFile } from "@/lib/media";
+import { bucket, MAX_UPLOAD, CREATOR_STORAGE_QUOTA, validFile } from "@/lib/media";
 import { timedPreviewIsShort } from "@/lib/preview-validation";
 export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
@@ -24,6 +24,8 @@ export async function POST(req: Request) {
       decodeURIComponent(req.headers.get("x-file-name") || "archivo")
         .replace(/[\r\n\x00-\x1f]/g, "")
         .slice(0, 150) || "archivo";
+    if (role === "full")
+      throw new AppError(400, "Los archivos completos se suben con la carga directa de hasta 500 MB.");
     const uploadLimit = role === "avatar" ? 5 * 1024 * 1024 : MAX_UPLOAD;
     if (Number(req.headers.get("content-length") || 0) > uploadLimit)
       throw new AppError(
@@ -38,11 +40,8 @@ export async function POST(req: Request) {
       )
       .bind(user.userId)
       .first<{ size: number }>();
-    if ((total?.size || 0) > 500 * 1024 * 1024)
-      throw new AppError(
-        413,
-        "Alcanzaste el límite de 500 MB de este estudio.",
-      );
+    if ((total?.size || 0) > CREATOR_STORAGE_QUOTA)
+      throw new AppError(413, "Alcanzaste el límite de 5 GB de este estudio.");
     const reader = req.body?.getReader();
     if (!reader) throw new AppError(400, "Selecciona un archivo.");
     const chunks: Uint8Array[] = [];
@@ -62,11 +61,8 @@ export async function POST(req: Request) {
       }
       chunks.push(value);
     }
-    if ((total?.size || 0) + size > 500 * 1024 * 1024)
-      throw new AppError(
-        413,
-        "Este archivo supera el espacio disponible de tu estudio.",
-      );
+    if ((total?.size || 0) + size > CREATOR_STORAGE_QUOTA)
+      throw new AppError(413, "Este archivo supera el espacio disponible de tu estudio (5 GB).");
     const buffer = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) {
