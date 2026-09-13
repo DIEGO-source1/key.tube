@@ -9,6 +9,7 @@ import {
   readJson,
   response,
   failure,
+  AppError,
 } from "@/lib/keytube-server";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,19 @@ export async function POST(req: Request) {
       data.network,
       user.userId,
     );
+
+    const alreadyLinked = await db()
+      .prepare(
+        "SELECT owner_id FROM profiles WHERE lower(wallet)=lower(?) AND owner_id<>? AND wallet<>'' LIMIT 1",
+      )
+      .bind(data.wallet, user.userId)
+      .first<{ owner_id: string }>();
+    if (alreadyLinked)
+      throw new AppError(
+        409,
+        "Esta wallet ya está vinculada a otra cuenta de KeyTube. Elige otra cuenta en MetaMask o desvincúlala de la cuenta anterior.",
+      );
+
     await db()
       .prepare("UPDATE profiles SET wallet=?, updated_at=? WHERE owner_id=?")
       .bind(data.wallet, Date.now(), user.userId)

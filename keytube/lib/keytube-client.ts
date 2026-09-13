@@ -39,11 +39,44 @@ export async function api<T>(
     );
   return d;
 }
-export async function connectWallet() {
+type ConnectWalletOptions = {
+  /** Force the wallet extension to show its account chooser when supported. */
+  chooseAccount?: boolean;
+};
+
+function isUserRejected(error: unknown) {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      Number((error as { code?: unknown }).code) === 4001,
+  );
+}
+
+export async function connectWallet(options: ConnectWalletOptions = {}) {
   if (!window.ethereum)
     throw new Error(
       "Abre KeyTube con una wallet como MetaMask. En el celular, usa el navegador de tu wallet.",
     );
+
+  // eth_requestAccounts often reuses the account that was connected by the
+  // previous KeyTube user in the same browser.  MetaMask's permission request
+  // opens the account selector again, which lets a second KeyTube account pick
+  // its own wallet instead of silently inheriting the first one.
+  if (options.chooseAccount) {
+    try {
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+    } catch (error) {
+      if (isUserRejected(error))
+        throw new Error("Selecciona la cuenta de MetaMask que quieres usar con este perfil.");
+      // Other injected wallets may not implement wallet_requestPermissions.
+      // Fall back to the standard connection flow below.
+    }
+  }
+
   const accounts = (await window.ethereum.request({
     method: "eth_requestAccounts",
   })) as string[];
