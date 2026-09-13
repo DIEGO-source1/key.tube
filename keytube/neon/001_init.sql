@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   name text NOT NULL,
   bio text NOT NULL DEFAULT '',
   avatar text NOT NULL DEFAULT 'valeria',
+  wallet text NOT NULL DEFAULT '',
   updated_at bigint NOT NULL
 );
 
@@ -78,10 +79,12 @@ CREATE TABLE IF NOT EXISTS posts (
   updated_at bigint NOT NULL DEFAULT 0,
   visibility text NOT NULL DEFAULT 'members',
   plan_id text,
-  premium_lock text
+  premium_lock text,
+  views integer NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS posts_owner_idx ON posts(owner_id);
 CREATE INDEX IF NOT EXISTS posts_created_idx ON posts(created_at);
+CREATE INDEX IF NOT EXISTS posts_views_idx ON posts(views);
 
 CREATE TABLE IF NOT EXISTS challenges (
   id text PRIMARY KEY,

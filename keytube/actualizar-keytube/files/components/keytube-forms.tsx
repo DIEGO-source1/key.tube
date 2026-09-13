@@ -25,7 +25,7 @@ export function AuthForm({googleEnabled,onSuccess}:{googleEnabled:boolean;onSucc
 }
 const formats:ContentType[]=['video','audio','image','document','text'];
 export function PlanEditor({slot,existing,sibling,onSaved}:{slot:'basic'|'premium';existing?:CreatorPlan;sibling?:CreatorPlan;onSaved:()=>void}) {
-  const [name,setName]=useState(existing?.name||(slot==='basic'?'Básico':'Premium')),[description,setDescription]=useState(existing?.description||''),[benefits,setBenefits]=useState(existing?.benefits.join('\n')||''),[coverage,setCoverage]=useState<ContentType[]>(existing?.coverage||formats),[price,setPrice]=useState(existing?.price||''),[days,setDays]=useState(existing?.durationDays||30),[network,setNetwork]=useState(existing?.network||sibling?.network||84532),[lock,setLock]=useState(existing?.lock||''),[importing,setImporting]=useState(!!existing),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState('');
+  const [name,setName]=useState(existing?.name||(slot==='basic'?'Básico':'Premium')),[description,setDescription]=useState(existing?.description||''),[benefits,setBenefits]=useState(existing?.benefits.join('\n')||''),[coverage,setCoverage]=useState<ContentType[]>(existing?.coverage||formats),[price,setPrice]=useState(existing?.price||''),[days,setDays]=useState(existing?.durationDays||30),[network,setNetwork]=useState(existing?.network||sibling?.network||1),[lock,setLock]=useState(existing?.lock||''),[importing,setImporting]=useState(!!existing),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState('');
   async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{
     if(!coverage.length)throw new Error('Selecciona al menos un formato.');
     if(sibling){const basic=slot==='basic'?coverage:sibling.coverage,premium=slot==='premium'?coverage:sibling.coverage;if(basic.some(t=>!premium.includes(t)))throw new Error('Premium debe cubrir también los formatos del Básico.');}
@@ -45,7 +45,7 @@ export function PlanEditor({slot,existing,sibling,onSaved}:{slot:'basic'|'premiu
     <label>Red del plan<select value={network} disabled={!!existing||!!sibling} onChange={e=>setNetwork(Number(e.target.value))}>{NETWORK_OPTIONS.map(n=><option key={n.id} value={n.id}>{n.name}</option>)}</select></label>
     {!existing&&<label className="k2-checkbox"><input type="checkbox" checked={importing} onChange={e=>setImporting(e.target.checked)}/> Ya tengo un Lock y quiero vincularlo</label>}
     {(importing||!!lock)&&<label>Dirección del Lock<input required readOnly={!!existing} value={lock} onChange={e=>setLock(e.target.value)} placeholder="0x…" pattern="0x[0-9a-fA-F]{40}"/></label>}
-    <small>{network===84532||network===11155111?'Red de pruebas: utiliza ETH de prueba.':'Esta red utiliza fondos reales.'} Tu wallet confirma las transacciones. El precio y la duración deben coincidir con Unlock.</small>
+    <small>{network===84532||network===11155111?'Red de pruebas: utiliza ETH de prueba.':'Necesitas saldo en la moneda nativa de esta red para pagar las comisiones. Esta red utiliza fondos reales.'} Tu wallet confirma las transacciones. El precio y la duración deben coincidir con Unlock.</small>
     <button className="k2-primary" disabled={busy}>{busy?<LoaderCircle className="k2-spin" size={17}/>:<KeyRound size={17}/>} {busy?'Guardando…':existing?'Guardar cambios':importing?'Vincular Lock':'Crear Lock y guardar plan'}</button>
   </fieldset>{status&&<p className="k2-notice" role="status">{status}</p>}{error&&<p className="k2-error" role="alert">{error}</p>}</form>;
 }
@@ -72,7 +72,7 @@ export function Publisher({creator,plans,onPublished}:{creator:string;plans:Crea
     if(generated)previewId=await upload(generated,'preview');
     if(cover||generatedCover)thumbnailId=await upload((cover||generatedCover)!,'thumbnail');
     else if(file&&type==='image')thumbnailId=await upload(await imagePreview(file),'thumbnail');
-    const draft:Draft={creator,title,intro,body,visibility:plan?'members':'free',planId:plan?.id||null,lock:plan?.lock||'',network:plan?.network||84532,type,category,assetId,previewId,thumbnailId};
+    const draft:Draft={creator,title,intro,body,visibility:plan?'members':'free',planId:plan?.id||null,lock:plan?.lock||'',network:plan?.network||1,type,category,assetId,previewId,thumbnailId};
     let proof={};if(plan){const wallet=await connectWallet();setStatus('Firma para publicar con tu membresía.');proof=await signProof('publish',wallet,plan.network,{draft});}
     const result=await api<{post:PublicPost}>('/api/posts',{draft,...proof});onPublished(result.post);
   }catch(e){setError(errorText(e));}finally{setBusy(false);setStatus('');setProgress(null);controller.current=null;}}

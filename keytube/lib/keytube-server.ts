@@ -150,6 +150,7 @@ export type StoredPost = {
   visibility?: "free" | "members";
   plan_id?: string | null;
   premium_lock?: string | null;
+  views?: number;
   type?: import("./keytube-types").ContentType;
   category?: string;
   thumbnail_id?: string | null;
@@ -177,6 +178,7 @@ export function publicPost(p: StoredPost) {
     lock: p.lock,
     network: p.network,
     created_at: p.created_at,
+    views: p.views || 0,
     type: p.type || "text",
     category: p.category || "Educación",
     thumbnail_url: p.thumbnail_id ? `/api/media/${p.thumbnail_id}` : undefined,

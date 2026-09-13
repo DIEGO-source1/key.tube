@@ -22,6 +22,8 @@ export async function POST(req:Request) {
     sameOrigin(req);const user=await requireCreator();
     const {plan,...proof}=proofSchema.extend({plan:planSchema}).parse(await readJson(req));
     await consumeProof(req,proof,'plan',await hash(JSON.stringify(plan)),plan.network,user.userId);
+    const linked=await db().prepare('SELECT wallet FROM profiles WHERE owner_id=?').bind(user.userId).first<{wallet:string}>();
+    if(linked?.wallet&&linked.wallet.toLowerCase()!==proof.wallet.toLowerCase())throw new AppError(403,'Conecta la wallet que vinculaste a tu perfil o cámbiala desde Mi cuenta.');
     await verifyRealLock(plan.lock,plan.network);
     const client=rpcClient(plan.network);
     const [manager,price,duration,currency]=await Promise.all([
@@ -51,6 +53,7 @@ export async function POST(req:Request) {
     await db().prepare('INSERT INTO creator_plans (id,owner_id,slot,name,description,benefits,coverage,price,duration_days,network,lock,wallet,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(owner_id,slot) DO UPDATE SET name=excluded.name,description=excluded.description,benefits=excluded.benefits,coverage=excluded.coverage,price=excluded.price,duration_days=excluded.duration_days,updated_at=excluded.updated_at')
       .bind(id,user.userId,plan.slot,plan.name,plan.description,JSON.stringify(plan.benefits),JSON.stringify(plan.coverage),plan.price,plan.durationDays,plan.network,plan.lock,proof.wallet,Date.now()).run();
     if(plan.slot==='premium'&&other)await db().prepare("UPDATE posts SET premium_lock=? WHERE owner_id=? AND plan_id=? AND visibility='members'").bind(plan.lock,user.userId,other.id).run();
+    if(!linked?.wallet)await db().prepare('UPDATE profiles SET wallet=?,updated_at=? WHERE owner_id=?').bind(proof.wallet,Date.now(),user.userId).run();
     return response({plan:{...plan,id,ownerId:user.userId,wallet:proof.wallet}});
   }catch(e){return failure(e);}
 }

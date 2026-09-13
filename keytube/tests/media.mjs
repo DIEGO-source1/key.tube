@@ -20,7 +20,7 @@ const signer = privateKeyToAccount(generatePrivateKey()),
   wallet = signer.address.toLowerCase(),
   network = 84532;
 const bytes = readFileSync(
-  new URL("../public/images/mountain.jpg", import.meta.url),
+  new URL("../public/images/hero.jpg", import.meta.url),
 );
 function req(path, body, method = "POST") {
   return new Request(origin + path, {

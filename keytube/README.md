@@ -1,4 +1,6 @@
-# KeyTube · Cuentas y membresías de creadores
+# KeyTube
+
+> **Versión V5 · Vercel + Neon + Unlock:** consulta `KEYTUBE_V5.md` para las funciones nuevas, la migración de vistas/wallet y el reinicio opcional de usuarios/contenido.
 
 Portal en React y TypeScript con servidor, base de datos y almacenamiento privado. Cada persona puede abrir una cuenta, publicar contenido gratuito o exclusivo y administrar **dos planes propios: Básico y Premium**. El contenido exclusivo requiere una Key vigente de **Unlock**.
 

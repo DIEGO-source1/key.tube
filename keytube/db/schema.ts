@@ -31,10 +31,12 @@ export const posts = pgTable(
     visibility: text("visibility").notNull().default("members"),
     planId: text("plan_id"),
     premiumLock: text("premium_lock"),
+    views: integer("views").notNull().default(0),
   },
   (t) => [
     index("posts_owner_idx").on(t.ownerId),
     index("posts_created_idx").on(t.createdAt),
+    index("posts_views_idx").on(t.views),
   ],
 );
 
@@ -87,6 +89,7 @@ export const profiles = pgTable("profiles", {
   name: text("name").notNull(),
   bio: text("bio").notNull().default(""),
   avatar: text("avatar").notNull().default("valeria"),
+  wallet: text("wallet").notNull().default(""),
   updatedAt: epochMs("updated_at").notNull(),
 });
 

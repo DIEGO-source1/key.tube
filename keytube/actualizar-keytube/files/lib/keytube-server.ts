@@ -30,7 +30,7 @@ export const addressSchema = z
 export const networkSchema = z
   .number()
   .int()
-  .refine((x) => [84532, 11155111, 8453, 137].includes(x), "Red no admitida.");
+  .refine((x) => [1, 84532, 11155111, 8453, 137].includes(x), "Red no admitida.");
 export const draftSchema = z
   .object({
     creator: z.string().trim().min(2).max(65),

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-for (const suite of ["access", "media", "accounts-plans", "feed-profile", "uploads-controls", "wallet"]) {
+for (const suite of ["access", "media", "accounts-plans", "feed-profile", "uploads-controls", "wallet", "ethereum"]) {
   const result = spawnSync(
     process.execPath,
     [

@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   Download,
   ArrowUpRight,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PublicPost, FullContent } from "@/lib/keytube-types";
@@ -117,9 +118,10 @@ export function ContentCard({
         <span className="kt-card-category">
           {mediaLabels[post.type || "text"]} · {post.category}
         </span>
-        <span className={`kt-access-badge ${post.sample ? "sample" : ""}`}>
+        <span className="kt-card-views"><Eye size={12} /> {post.views || 0} vistas</span>
+        <span className="kt-access-badge">
           <LockKeyhole size={12} />
-          {post.sample ? "Ejemplo de contenido" : post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros · adelanto gratis"}
+          {post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros · adelanto gratis"}
         </span>
       </div>
     </article>

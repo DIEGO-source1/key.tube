@@ -59,6 +59,7 @@ export type Asset = {
   role: string;
 };
 export const NETWORK_OPTIONS = [
+  { id: 1, name: "Ethereum · red principal" },
   { id: 84532, name: "Base Sepolia · pruebas" },
   { id: 11155111, name: "Sepolia · pruebas" },
   { id: 8453, name: "Base" },

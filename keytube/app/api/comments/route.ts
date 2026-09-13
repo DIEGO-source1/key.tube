@@ -8,7 +8,6 @@ import {
   failure,
   AppError,
 } from "@/lib/keytube-server";
-import { SAMPLE_POSTS } from "@/lib/keytube-types";
 export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
@@ -39,7 +38,6 @@ export async function POST(req: Request) {
       })
       .parse(await readJson(req));
     if (
-      !SAMPLE_POSTS.some((p) => p.id === data.postId) &&
       !(await db()
         .prepare("SELECT id FROM posts WHERE id = ?")
         .bind(data.postId)

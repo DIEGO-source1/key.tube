@@ -42,6 +42,7 @@ function normalizeValue(key: string, value: unknown) {
     key === "count" ||
     key === "size" ||
     key === "network" ||
+    key === "views" ||
     key === "duration_days" ||
     key.endsWith("_at")
   ) {

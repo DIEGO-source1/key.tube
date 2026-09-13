@@ -21,7 +21,7 @@ export async function GET() {
       });
     const [profile, saved, following, count] = await Promise.all([
       db()
-        .prepare("SELECT name,bio,avatar FROM profiles WHERE owner_id = ?")
+        .prepare("SELECT name,bio,avatar,wallet FROM profiles WHERE owner_id = ?")
         .bind(user.userId)
         .first(),
       db()
@@ -46,6 +46,7 @@ export async function GET() {
         name: user.fullName || "Mi perfil",
         bio: "",
         avatar: "nico",
+        wallet: "",
       },
       saved: saved.results.map((x) => x.post_id),
       following: following.results.map((x) => x.creator_id),

@@ -16,7 +16,7 @@ import {
 import { planSchema } from "@/lib/plans";
 export const dynamic = "force-dynamic";
 const schema = z.object({
-  purpose: z.enum(["read", "publish", "plan"]),
+  purpose: z.enum(["read", "publish", "plan", "wallet"]),
   wallet: addressSchema,
   network: networkSchema,
   postId: z.string().uuid().optional(),
@@ -30,7 +30,11 @@ export async function POST(req: Request) {
     const now = Date.now();
     let userId = "",
       target = "";
-    if (data.purpose === "plan") {
+    if (data.purpose === "wallet") {
+      const user = await requireCreator();
+      userId = user.userId;
+      target = user.userId;
+    } else if (data.purpose === "plan") {
       const user = await requireCreator();
       userId = user.userId;
       if (!data.plan || data.plan.network !== data.network) throw new AppError(400,"Falta el plan o la red no coincide.");
@@ -66,7 +70,14 @@ export async function POST(req: Request) {
       throw new AppError(429, "Espera un minuto antes de volver a verificar.");
     const id = crypto.randomUUID(),
       expiresAt = now + 300000;
-    const message = `KeyTube — ${data.purpose === "read" ? "Verificar acceso al contenido" : data.purpose === "plan" ? "Autorizar plan de membresía" : "Autorizar publicación"}\nSitio: ${new URL(req.url).origin}\nBilletera: ${data.wallet}\nRed: ${data.network}\nDestino: ${target}\nNonce: ${id}\nEmitido: ${new Date(now).toISOString()}\nVence: ${new Date(expiresAt).toISOString()}\nEsta firma no realiza pagos ni autoriza transferencias.`;
+    const actionLabel = data.purpose === "read"
+      ? "Verificar acceso al contenido"
+      : data.purpose === "plan"
+        ? "Autorizar plan de membresía"
+        : data.purpose === "wallet"
+          ? "Vincular wallet a mi perfil"
+          : "Autorizar publicación";
+    const message = `KeyTube — ${actionLabel}\nSitio: ${new URL(req.url).origin}\nBilletera: ${data.wallet}\nRed: ${data.network}\nDestino: ${target}\nNonce: ${id}\nEmitido: ${new Date(now).toISOString()}\nVence: ${new Date(expiresAt).toISOString()}\nEsta firma no realiza pagos ni autoriza transferencias.`;
     await db()
       .prepare(
         "INSERT INTO challenges (id,requester,user_id,wallet,network,purpose,target,message,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?)",

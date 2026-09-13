@@ -1,7 +1,7 @@
 "use client";
 import {createWalletClient,custom,encodeFunctionData,parseAbi,parseEther,decodeEventLog,zeroAddress,type Address} from 'viem';
 import {chainConfig,rpcClient} from './unlock';
-const factoryAbi=parseAbi(['function createUpgradeableLockAtVersion(bytes data,uint16 version) returns (address)','event NewLock(address indexed lockOwner,address indexed newLockAddress)']);
+const factoryAbi=parseAbi(['function createUpgradeableLock(bytes data) returns (address)','event NewLock(address indexed lockOwner,address indexed newLockAddress)']);
 const manageAbi=parseAbi([
   'function initialize(address,uint256,address,uint256,uint256,string)',
   'function keyPrice() view returns (uint256)',
@@ -27,7 +27,7 @@ export async function deployPlanLock(input:{name:string;price:string;durationDay
   const {factory}=chainConfig(input.network);
   const data=encodeFunctionData({abi:manageAbi,functionName:'initialize',args:[account,BigInt(input.durationDays*86400),zeroAddress,parseEther(input.price),BigInt(1000),input.name]});
   onStatus('Confirma la creación del Lock en tu wallet.');
-  const hash=await wallet.writeContract({address:factory as Address,abi:factoryAbi,functionName:'createUpgradeableLockAtVersion',args:[data,15]});
+  const hash=await wallet.writeContract({address:factory as Address,abi:factoryAbi,functionName:'createUpgradeableLock',args:[data]});
   onStatus('Esperando la confirmación de la red…');
   const receipt=await client.waitForTransactionReceipt({hash,timeout:180000});
   if(receipt.status!=='success')throw new Error('La creación del Lock no se completó.');

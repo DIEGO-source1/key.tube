@@ -51,8 +51,21 @@ export async function connectWallet() {
     throw new Error("No se conectó una wallet.");
   return accounts[0] as Address;
 }
+export async function connectedWallet() {
+  if (!window.ethereum) return null;
+  const accounts = (await window.ethereum.request({ method: "eth_accounts" })) as string[];
+  return accounts[0] && isAddress(accounts[0]) ? (accounts[0] as Address) : null;
+}
+export async function walletNetwork() {
+  if (!window.ethereum) throw new Error("No hay una wallet disponible.");
+  const value = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+  const id = Number.parseInt(value, 16);
+  if (![84532, 11155111, 8453, 137].includes(id))
+    throw new Error("Cambia tu wallet a Base Sepolia, Sepolia, Base o Polygon.");
+  return id;
+}
 export async function signProof(
-  purpose: "read" | "publish" | "plan",
+  purpose: "read" | "publish" | "plan" | "wallet",
   wallet: Address,
   network: number,
   data: { postId?: string; draft?: Draft; plan?: unknown },

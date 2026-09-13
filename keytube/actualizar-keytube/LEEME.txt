@@ -1,10 +1,15 @@
-Detén KeyTube con Ctrl+C.
-Coloca esta carpeta actualizar-keytube dentro de tu carpeta keytube actual.
-Desde PowerShell, en keytube, ejecuta:
+Ethereum principal en KeyTube
+
+1. Detén el servidor con Ctrl+C.
+2. Extrae este ZIP dentro de la carpeta keytube que ya tiene las dependencias instaladas.
+3. Ejecuta desde esa carpeta:
 
 node .\actualizar-keytube\instalar.mjs
-pnpm.cmd db:setup
+pnpm.cmd build
+node .\scripts\start-local.mjs
 
-Confirma con Y. Si terminó sin errores, ejecuta pnpm.cmd dev.
-No necesitas volver a instalar dependencias.
-El respaldo conserva los archivos reemplazados y la base D1 local si existe.
+Continúa con el siguiente comando solo si el anterior terminó sin errores.
+Esta actualización no necesita migraciones ni reinstalar dependencias.
+Abre http://127.0.0.1:5173 cuando indique KeyTube listo.
+En Mis planes selecciona Ethereum · red principal.
+Necesitas ETH real en Ethereum Mainnet para pagar las comisiones. Tu wallet muestra y confirma las operaciones.

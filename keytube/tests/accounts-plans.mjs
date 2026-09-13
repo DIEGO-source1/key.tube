@@ -50,7 +50,7 @@ state.locks={[basic.lock]:true};r=await access(req('/api/access',{postId:premium
 state.locks={};r=await access(req('/api/access',{postId:basicPost.id,...await proof('read',{postId:basicPost.id})}));assert.equal(r.status,403);ok('No membership means no private body, regardless of login');
 useCookie(brunoCookie);r=await publish(req('/api/posts',{draft,...await proof('publish',{draft})}));assert.equal(r.status,403);r=await save(basic);assert.equal(r.status,409);ok('Another application account cannot publish under or claim the creator’s plan');
 useCookie(anaCookie);r=await save({...premium,coverage:['video']});assert.equal(r.status,400);ok('Premium cannot remove the formats promised by Básico');
-const bytes=readFileSync(new URL('../public/images/mountain.jpg',import.meta.url));
+const bytes=readFileSync(new URL('../public/images/hero.jpg',import.meta.url));
 const uploadReq=(data,mime,role)=>new Request(origin+'/api/uploads?role='+role,{method:'POST',headers:{Origin:origin,'Content-Type':mime,Cookie:globalThis.testCookie||'','X-File-Name':'test'},body:data});
 r=await upload(uploadReq(bytes,'image/jpeg','full'));assert.equal(r.status,201);const freeAsset=(await r.json()).asset;
 const freeDraft={...draft,title:'Fotografía gratuita',type:'image',body:'Notas públicas',visibility:'free',planId:null,lock:'',assetId:freeAsset.id};
@@ -59,7 +59,7 @@ useCookie('');r=await freeContent(req('/api/free-content?post='+freePost.id,unde
 r=await freeContent(req('/api/free-content?post='+basicPost.id,undefined,'GET'));assert.equal(r.status,403);r=await media(req('/api/media/'+freeAsset.id+'?public='+basicPost.id,undefined,'GET'),{params:Promise.resolve({id:freeAsset.id})});assert.equal(r.status,403);assert.ok(!(await (await posts(req('/api/posts',undefined,'GET'))).text()).includes('SECRETO_DE_ANA'));ok('Changing a public URL parameter cannot expose member content');
 function wav(seconds){const rate=8000,length=rate*seconds,b=Buffer.alloc(44+length*2);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVE',8);b.write('fmt ',12);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(rate,24);b.writeUInt32LE(rate*2,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(length*2,40);return b;}
 assert.equal(timedPreviewIsShort(wav(10),'audio/wav'),true);assert.equal(timedPreviewIsShort(wav(11),'audio/wav'),false);useCookie(anaCookie);r=await upload(uploadReq(wav(11),'audio/wav','preview'));assert.equal(r.status,400);r=await upload(uploadReq(wav(10),'audio/wav','preview'));assert.equal(r.status,201);ok('Server accepts a 10-second audio preview and rejects an 11-second preview');
-const sampleMP4=readFileSync(new URL('../public/samples/andes-preview.mp4',import.meta.url));r=await upload(uploadReq(sampleMP4,'video/mp4','preview'));assert.equal(r.status,400);ok('Unvalidated MP4 originals cannot be uploaded as timed previews');
+const sampleMP4=Buffer.from('000000186674797069736F6D0000020069736F6D','hex');r=await upload(uploadReq(sampleMP4,'video/mp4','preview'));assert.equal(r.status,400);ok('Unvalidated MP4 originals cannot be uploaded as timed previews');
 // Google cryptographic verification uses generated keys; no real account or credential.
 env.GOOGLE_CLIENT_ID='client.test';env.GOOGLE_CLIENT_SECRET='test-only';env.APP_ORIGIN=origin;
 const keys=await crypto.subtle.generateKey({name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['sign','verify']);
