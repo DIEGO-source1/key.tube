@@ -60,12 +60,14 @@ export function CreatorAvatar({
 export function ContentCard({
   post,
   saved,
+  index,
   onOpen,
   onSave,
   onCreator,
 }: {
   post: PublicPost;
   saved: boolean;
+  index?: number;
   onOpen: () => void;
   onSave: () => void;
   onCreator: () => void;
@@ -78,8 +80,45 @@ export function ContentCard({
         : post.type === "text" || post.type === "document"
           ? FileText
           : Play;
+  const published = new Date(post.created_at).toLocaleDateString("es-BO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const indexLabel = String(index || 1).padStart(2, "0");
   return (
-    <article className="kt-content-card">
+    <article className="kt-content-card kt-feed-card">
+      <header className="kt-feed-card-head">
+        <button className="kt-creator-link kt-feed-creator" onClick={onCreator}>
+          <CreatorAvatar name={post.creator} avatar={post.avatar} size={42} />
+          <span>
+            <strong>{post.creator}</strong>
+            <small>{published} · {mediaLabels[post.type || "text"]}</small>
+          </span>
+        </button>
+        <div className="kt-feed-head-actions">
+          <span className="kt-feed-index" title={`Publicación ${indexLabel}`}>#{indexLabel}</span>
+          <button
+            className={`kt-feed-save ${saved ? "selected" : ""}`}
+            aria-label={saved ? "Quitar de guardados" : "Guardar publicación"}
+            aria-pressed={saved}
+            onClick={onSave}
+          >
+            <Bookmark size={18} fill={saved ? "currentColor" : "none"} />
+          </button>
+        </div>
+      </header>
+
+      <div className="kt-feed-card-copy">
+        <button className="kt-card-title" onClick={onOpen}>{post.title}</button>
+        {!!post.intro && <p className="kt-card-intro">{post.intro}</p>}
+        <div className="kt-feed-tags">
+          <span>{mediaLabels[post.type || "text"]}</span>
+          <span>{post.category || "General"}</span>
+          <span>{post.visibility === "free" ? "Público" : "Miembros"}</span>
+        </div>
+      </div>
+
       <div className="kt-thumb">
         <button
           className="kt-open-thumbnail"
@@ -90,46 +129,28 @@ export function ContentCard({
             <img src={post.thumbnail_url} alt="" loading="lazy" />
           ) : (
             <span className={`kt-generated-cover ${post.type || "text"}`}>
-              <Icon size={40} />
+              <Icon size={54} />
               <span>{post.category}</span>
             </span>
           )}
           <span className="kt-thumb-play">
             <Icon
-              size={20}
+              size={26}
               fill={post.type === "video" ? "currentColor" : "none"}
             />
           </span>
-          {post.duration && (
-            <span className="kt-duration">{post.duration}</span>
-          )}
-        </button>
-        <button
-          className={`kt-save ${saved ? "selected" : ""}`}
-          aria-label={saved ? "Quitar de guardados" : "Guardar publicación"}
-          aria-pressed={saved}
-          onClick={onSave}
-        >
-          <Bookmark size={16} fill={saved ? "currentColor" : "none"} />
+          {post.duration && <span className="kt-duration">{post.duration}</span>}
         </button>
       </div>
-      <div className="kt-card-copy">
-        <button className="kt-card-title" onClick={onOpen}>
-          {post.title}
-        </button>
-        <button className="kt-creator-link" onClick={onCreator}>
-          <CreatorAvatar name={post.creator} avatar={post.avatar} size={22} />
-          <span>{post.creator}</span>
-        </button>
-        <span className="kt-card-category">
-          {mediaLabels[post.type || "text"]} · {post.category}
-        </span>
-        <span className="kt-card-views"><Eye size={12} /> {post.views || 0} vistas</span>
+
+      <footer className="kt-feed-card-footer">
+        <span className="kt-card-views"><Eye size={14} /> {post.views || 0} vistas</span>
+        <span className="kt-card-category">{post.category || "General"}</span>
         <span className="kt-access-badge">
-          <LockKeyhole size={12} />
+          <LockKeyhole size={13} />
           {post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros · adelanto gratis"}
         </span>
-      </div>
+      </footer>
     </article>
   );
 }
