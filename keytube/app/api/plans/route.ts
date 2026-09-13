@@ -89,14 +89,14 @@ export async function PUT(req: Request) {
           );
         }
 
-        if (duration % 86400n !== 0n) {
+        if (duration % BigInt(86400) !== BigInt(0)) {
           throw new AppError(
             400,
             `El Lock fue encontrado en ${option.name}, pero su duración no está configurada en días completos. Ajusta la duración en Unlock y vuelve a intentarlo.`,
           );
         }
 
-        const durationDays = Number(duration / 86400n);
+        const durationDays = Number(duration / BigInt(86400));
         if (durationDays < 1 || durationDays > 365) {
           throw new AppError(
             400,

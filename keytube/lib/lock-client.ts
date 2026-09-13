@@ -37,7 +37,7 @@ export async function deployPlanLock(input:{name:string;price:string;durationDay
   }
   throw new Error(`Transacción confirmada (${hash}). Copia la dirección del Lock desde Unlock y usa «Vincular Lock».`);
 }
-export async function updatePlanLock(input:{lock:string;price:string;durationDays:number;network:number},account:Address,onStatus:(s:string)=>void) {
+export async function updatePlanLock(input:{lock:string;price:string;durationDays:number;network:number;name?:string},account:Address,onStatus:(s:string)=>void) {
   const wallet=await prepareWallet(input.network,account),client=rpcClient(input.network),address=input.lock as Address;
   const [price,duration,currency]=await Promise.all([
     client.readContract({address,abi:manageAbi,functionName:'keyPrice'}),client.readContract({address,abi:manageAbi,functionName:'expirationDuration'}),client.readContract({address,abi:manageAbi,functionName:'tokenAddress'}),

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     sameOrigin(req);
     const user = await requireCreator();
     const role = z
-      .enum(["thumbnail", "preview", "full"])
+      .enum(["thumbnail", "preview", "full", "avatar"])
       .parse(new URL(req.url).searchParams.get("role"));
     const mime = (req.headers.get("content-type") || "")
       .split(";")[0]
