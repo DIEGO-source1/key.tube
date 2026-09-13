@@ -60,7 +60,7 @@ export async function authRateLimit(req: Request, email = '') {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('cf-connecting-ip') || 'local';
   const keys = [await digest(`ip:${ip}:${window}`), ...(email ? [await digest(`account:${email}:${window}`)] : [])];
   for (const key of keys) {
-    const row = await authDB().prepare('INSERT INTO auth_limits (key,count,expires_at) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count').bind(key, now+1200000).first<{count:number}>();
+    const row = await authDB().prepare('INSERT INTO auth_limits (key,count,expires_at) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=auth_limits.count+1 RETURNING auth_limits.count AS count').bind(key, now+1200000).first<{count:number}>();
     if ((row?.count||0) > (email ? 15 : 30)) throw new Error('Demasiados intentos. Espera 10 minutos para continuar.');
   }
   await authDB().prepare('DELETE FROM auth_limits WHERE expires_at < ?').bind(now).run();
