@@ -104,7 +104,12 @@ export async function GET(
         "Content-Disposition",
         `attachment; filename*=UTF-8''${encodeURIComponent(asset.name)}`,
       );
-    return new Response(object.body, { status: options ? 206 : 200, headers });
+    // Next.js/TypeScript's Fetch types require a BodyInit backed by ArrayBuffer,
+    // while Neon returns Uint8Array<ArrayBufferLike>. Copy into a plain
+    // ArrayBuffer so the response body is portable across Vercel runtimes.
+    const responseBody = new ArrayBuffer(object.body.byteLength);
+    new Uint8Array(responseBody).set(object.body);
+    return new Response(responseBody, { status: options ? 206 : 200, headers });
   } catch (e) {
     return failure(e);
   }
