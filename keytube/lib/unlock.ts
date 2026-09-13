@@ -1,6 +1,7 @@
 import {
   createPublicClient,
   http,
+  fallback,
   parseAbi,
   formatUnits,
   type Address,
@@ -48,37 +49,54 @@ export function chainConfig(network: number) {
 }
 export function rpcClient(network: number) {
   const { chain } = chainConfig(network);
+  const urls = Array.from(
+    new Set([
+      ...chain.rpcUrls.default.http,
+      ...((chain.rpcUrls as { public?: { http?: readonly string[] } }).public?.http || []),
+    ]),
+  );
   return createPublicClient({
     chain,
-    transport: http(chain.rpcUrls.default.http[0], {
-      timeout: 12000,
-      retryCount: 1,
-    }),
+    transport: fallback(
+      urls.map((url) =>
+        http(url, {
+          timeout: 12000,
+          retryCount: 1,
+        }),
+      ),
+    ),
   });
 }
 export async function verifyRealLock(lock: Address, network: number) {
-  const config = chainConfig(network);
+  // Do not rely only on a hard-coded factory address when importing a Lock.
+  // PublicLock exposes the Unlock factory that deployed it. We ask that
+  // reported factory whether the Lock is registered. This keeps linking
+  // compatible with Locks created by an older/newer Unlock factory.
+  chainConfig(network);
   const client = rpcClient(network);
-  const [factory, registration] = await Promise.all([
-    client.readContract({
-      address: lock,
-      abi: lockAbi,
-      functionName: "unlockProtocol",
-    }),
-    client.readContract({
-      address: config.factory as Address,
-      abi: factoryAbi,
-      functionName: "locks",
-      args: [lock],
-    }),
-  ]);
-  if (
-    factory.toLowerCase() !== config.factory.toLowerCase() ||
-    !registration[0]
-  )
+  const bytecode = await client.getBytecode({ address: lock });
+  if (!bytecode || bytecode === "0x")
+    throw new Error("No hay un contrato desplegado en esa dirección para esta red.");
+
+  const factory = await client.readContract({
+    address: lock,
+    abi: lockAbi,
+    functionName: "unlockProtocol",
+  });
+
+  const registration = await client.readContract({
+    address: factory,
+    abi: factoryAbi,
+    functionName: "locks",
+    args: [lock],
+  });
+
+  if (!registration[0])
     throw new Error(
       "La dirección no corresponde a un Lock registrado en Unlock para esta red.",
     );
+
+  return factory;
 }
 export async function getMembership(
   lock: Address,

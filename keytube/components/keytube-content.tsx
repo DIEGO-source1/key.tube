@@ -34,10 +34,15 @@ export function CreatorAvatar({
   avatar?: string;
   size?: number;
 }) {
-  return avatar ? (
+  const src = avatar
+    ? avatar.startsWith("asset:")
+      ? `/api/avatar/${avatar.slice(6)}`
+      : `/images/${avatar}.jpg`
+    : "";
+  return src ? (
     <img
       className="kt-avatar"
-      src={`/images/${avatar}.jpg`}
+      src={src}
       alt=""
       width={size}
       height={size}

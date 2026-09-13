@@ -24,8 +24,14 @@ export async function POST(req: Request) {
       decodeURIComponent(req.headers.get("x-file-name") || "archivo")
         .replace(/[\r\n\x00-\x1f]/g, "")
         .slice(0, 150) || "archivo";
-    if (Number(req.headers.get("content-length") || 0) > MAX_UPLOAD)
-      throw new AppError(413, "El límite por archivo es 20 MB.");
+    const uploadLimit = role === "avatar" ? 5 * 1024 * 1024 : MAX_UPLOAD;
+    if (Number(req.headers.get("content-length") || 0) > uploadLimit)
+      throw new AppError(
+        413,
+        role === "avatar"
+          ? "La foto de perfil debe pesar como máximo 5 MB."
+          : "El límite por archivo es 20 MB.",
+      );
     const total = await db()
       .prepare(
         "SELECT COALESCE(SUM(size),0) AS size FROM assets WHERE owner_id = ?",
@@ -45,9 +51,14 @@ export async function POST(req: Request) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > MAX_UPLOAD) {
+      if (size > uploadLimit) {
         await reader.cancel();
-        throw new AppError(413, "El límite por archivo es 20 MB.");
+        throw new AppError(
+          413,
+          role === "avatar"
+            ? "La foto de perfil debe pesar como máximo 5 MB."
+            : "El límite por archivo es 20 MB.",
+        );
       }
       chunks.push(value);
     }
@@ -67,8 +78,13 @@ export async function POST(req: Request) {
         400,
         "Formato no admitido o contenido del archivo inválido.",
       );
-    if (role === "thumbnail" && !mime.startsWith("image/"))
-      throw new AppError(400, "La portada debe ser JPG, PNG o WEBP.");
+    if ((role === "thumbnail" || role === "avatar") && !mime.startsWith("image/"))
+      throw new AppError(
+        400,
+        role === "avatar"
+          ? "La foto de perfil debe ser JPG, PNG o WEBP."
+          : "La portada debe ser JPG, PNG o WEBP.",
+      );
     if (role === "preview" && /^(video|audio)\//.test(mime) && !timedPreviewIsShort(buffer, mime))
       throw new AppError(400, "El adelanto debe ser un WebM o WAV de hasta 10 segundos. Usa la generación automática del estudio.");
     const id = crypto.randomUUID(),
