@@ -38,6 +38,7 @@ export async function signedBlobReadUrl(storageKey: string, ttlMs = 2 * 60 * 60 
     pathname,
     operation: "get",
     validUntil,
+    access: "private",
   });
   return presignedUrl;
 }
