@@ -8,7 +8,6 @@ import {
   AppError,
 } from "@/lib/keytube-server";
 import { bucket, MAX_UPLOAD, validFile } from "@/lib/media";
-import { timedPreviewIsShort } from "@/lib/preview-validation";
 import {STUDIO_CAPACITY} from '@/lib/upload-limits';
 export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
@@ -72,8 +71,8 @@ export async function POST(req: Request) {
       );
     if ((role === "thumbnail" || role === "avatar") && !["image/jpeg","image/png","image/webp"].includes(mime))
       throw new AppError(400, "La portada debe ser JPG, PNG o WEBP.");
-    if (role === "preview" && /^(video|audio)\//.test(mime) && !timedPreviewIsShort(buffer, mime))
-      throw new AppError(400, "El adelanto debe ser un WebM o WAV de hasta 10 segundos. Usa la generación automática del estudio.");
+    if (role === "preview" && !["video/webm", "audio/webm", "audio/wav", "audio/x-wav"].includes(mime))
+      throw new AppError(400, "El adelanto automático debe ser WebM o WAV.");
     const id = crypto.randomUUID(),
       storageKey = `${role}/${id}`;
     await bucket().put(storageKey, buffer, {

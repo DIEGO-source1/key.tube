@@ -27,7 +27,7 @@ export async function audioPreview(file:File) {
     const chunks:Blob[]=[];
     const result=new Promise<Blob>((resolve,reject)=>{recorder!.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder!.onstop=()=>resolve(new Blob(chunks,{type:'audio/webm'}));recorder!.onerror=()=>reject(new Error('No se pudo preparar el adelanto del audio.'));});
     recorder.start(200);await audio.play();
-    const cap=Math.min(9500,Math.max(1000,(Number.isFinite(audio.duration)?audio.duration*900:9500)));
+    const cap=Math.min(9800,Math.max(1000,(Number.isFinite(audio.duration)?Math.max(1000,audio.duration*1000-200):9800)));
     timer=setTimeout(()=>{audio.pause();if(recorder?.state==='recording')recorder.stop();},cap);
     audio.onended=()=>{if(recorder?.state==='recording')recorder.stop();};
     const blob=await result;
@@ -45,7 +45,7 @@ export async function videoPreview(file:File,onProgress:(seconds:number)=>void) 
   let recorder:MediaRecorder|undefined;
   try {
     await new Promise<void>((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('El video tardó demasiado en abrirse. Prueba un MP4 con H.264.')),15000);video.onloadeddata=()=>{clearTimeout(timeout);resolve();};video.onerror=()=>{clearTimeout(timeout);reject(new Error('El navegador no puede abrir este video. Prueba un MP4 con H.264.'));};video.load();});
-    const cap=Math.min(9.5,Number.isFinite(video.duration)?video.duration*.9:9.5);
+    const cap=Math.min(9.8,Number.isFinite(video.duration)?Math.max(1,video.duration-.2):9.8);
     const canvas=document.createElement('canvas'),scale=Math.min(1,854/video.videoWidth);
     canvas.width=Math.max(2,Math.round(video.videoWidth*scale));canvas.height=Math.max(2,Math.round(video.videoHeight*scale));
     const ctx=canvas.getContext('2d')!;ctx.drawImage(video,0,0,canvas.width,canvas.height);
@@ -66,7 +66,7 @@ export async function videoPreview(file:File,onProgress:(seconds:number)=>void) 
     const draw=()=>{ctx.drawImage(video,0,0,canvas.width,canvas.height);frame=requestAnimationFrame(draw);};
     recorder.start(200);draw();
     const started=performance.now();
-    timer=setInterval(()=>{onProgress(Math.min(10,video.currentTime));if(video.currentTime>=cap||video.ended||performance.now()-started>10000)finish();},30);
+    timer=setInterval(()=>{onProgress(Math.min(10,video.currentTime));if(video.currentTime>=cap||video.ended||performance.now()-started>10200)finish();},30);
     video.onended=finish;
     const blob=await result;
     return {preview:new File([blob],'adelanto-10s.webm',{type:'video/webm'}),cover};
