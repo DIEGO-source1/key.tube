@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "328f7513b8ae843252cfb3a4b65930e03f99b88edbfcda8703c28eec6152a20e"
+    },
+    {
+      "path": "components/keytube-forms.tsx",
+      "sha256": "952469c3e9f97b04926b64942a6df140fcafd129a111731219c3dbc447907773"
+    },
+    {
+      "path": "lib/keytube-server.ts",
+      "sha256": "85f3c97289ff38ea337bc3fa3c009ffbe3e61c27bb92feff6a3c83836e43a8b1"
+    },
+    {
+      "path": "lib/keytube-types.ts",
+      "sha256": "6f9fc791d9ab456cd9850ff3bce5a53e638d0ad275265bff8ec17a862f985b44"
+    },
+    {
+      "path": "lib/lock-client.ts",
+      "sha256": "7f1c9985c8f47d5a5e753c0195ec4c9ec94ba1d999faf868a241f40883111d8a"
+    },
+    {
+      "path": "lib/unlock.ts",
+      "sha256": "12c0155c2a3c22cdaae0f11cd4d05400bcf8ad085f53acaf6598a16a2cdfbbde"
+    },
+    {
+      "path": "scripts/start-local.mjs",
+      "sha256": "cf797f86ed8fb7c3e6632224245c56a1bf5e30b69c5b4518f61d6c2e8d75ad2c"
+    },
+    {
+      "path": "scripts/test.mjs",
+      "sha256": "f92b1cbb5be02895c7fbdaee1dbea72973177a16df60e130d0535b0c4e8cbc65"
+    },
+    {
+      "path": "tests/ethereum.mjs",
+      "sha256": "1de0f122ba94d85a0c8ba6e28af06f23bbd00e3f4aca95598cf707ab1e9b6739"
+    }
+  ],
+  "remove": []
+}

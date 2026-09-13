@@ -1,0 +1,94 @@
+import { z } from "zod";
+import {
+  requireCreator,
+  sameOrigin,
+  db,
+  response,
+  failure,
+  AppError,
+} from "@/lib/keytube-server";
+import { bucket, MAX_UPLOAD, validFile } from "@/lib/media";
+import { timedPreviewIsShort } from "@/lib/preview-validation";
+export const dynamic = "force-dynamic";
+export async function POST(req: Request) {
+  try {
+    sameOrigin(req);
+    const user = await requireCreator();
+    const role = z
+      .enum(["thumbnail", "preview", "full"])
+      .parse(new URL(req.url).searchParams.get("role"));
+    const mime = (req.headers.get("content-type") || "")
+      .split(";")[0]
+      .toLowerCase();
+    const name =
+      decodeURIComponent(req.headers.get("x-file-name") || "archivo")
+        .replace(/[\r\n\x00-\x1f]/g, "")
+        .slice(0, 150) || "archivo";
+    if (Number(req.headers.get("content-length") || 0) > MAX_UPLOAD)
+      throw new AppError(413, "El límite por archivo es 20 MB.");
+    const total = await db()
+      .prepare(
+        "SELECT COALESCE(SUM(size),0) AS size FROM assets WHERE owner_id = ?",
+      )
+      .bind(user.userId)
+      .first<{ size: number }>();
+    if ((total?.size || 0) > 500 * 1024 * 1024)
+      throw new AppError(
+        413,
+        "Alcanzaste el límite de 500 MB de este estudio.",
+      );
+    const reader = req.body?.getReader();
+    if (!reader) throw new AppError(400, "Selecciona un archivo.");
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_UPLOAD) {
+        await reader.cancel();
+        throw new AppError(413, "El límite por archivo es 20 MB.");
+      }
+      chunks.push(value);
+    }
+    if ((total?.size || 0) + size > 500 * 1024 * 1024)
+      throw new AppError(
+        413,
+        "Este archivo supera el espacio disponible de tu estudio.",
+      );
+    const buffer = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.length;
+    }
+    if (!size || !validFile(buffer, mime))
+      throw new AppError(
+        400,
+        "Formato no admitido o contenido del archivo inválido.",
+      );
+    if (role === "thumbnail" && !mime.startsWith("image/"))
+      throw new AppError(400, "La portada debe ser JPG, PNG o WEBP.");
+    if (role === "preview" && /^(video|audio)\//.test(mime) && !timedPreviewIsShort(buffer, mime))
+      throw new AppError(400, "El adelanto debe ser un WebM o WAV de hasta 10 segundos. Usa la generación automática del estudio.");
+    const id = crypto.randomUUID(),
+      storageKey = `${role}/${id}`;
+    await bucket().put(storageKey, buffer, {
+      httpMetadata: { contentType: mime },
+    });
+    try {
+      await db()
+        .prepare(
+          "INSERT INTO assets (id,owner_id,storage_key,role,name,mime,size,created_at) VALUES (?,?,?,?,?,?,?,?)",
+        )
+        .bind(id, user.userId, storageKey, role, name, mime, size, Date.now())
+        .run();
+    } catch (e) {
+      await bucket().delete(storageKey);
+      throw e;
+    }
+    return response({ asset: { id, role, name, mime, size } }, 201);
+  } catch (e) {
+    return failure(e);
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1789237561851,
+      "tag": "0000_lying_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789242550287,
+      "tag": "0001_calm_tyger_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789255310221,
+      "tag": "0002_nosy_the_enforcers",
+      "breakpoints": true
+    }
+  ]
+}
