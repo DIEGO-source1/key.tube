@@ -50,8 +50,11 @@ export async function PUT(req: Request) {
   try {
     sameOrigin(req);
     await requireCreator();
-    const { lock } = z
-      .object({ lock: addressSchema })
+    const { lock, preferredNetwork } = z
+      .object({
+        lock: addressSchema,
+        preferredNetwork: z.number().int().optional(),
+      })
       .parse(await readJson(req));
 
     const matches: Array<{
@@ -63,7 +66,15 @@ export async function PUT(req: Request) {
       lockName: string;
     }> = [];
 
-    for (const option of NETWORK_OPTIONS) {
+    const orderedOptions = preferredNetwork
+      ? [
+          ...NETWORK_OPTIONS.filter((option) => option.id === preferredNetwork),
+          ...NETWORK_OPTIONS.filter((option) => option.id !== preferredNetwork),
+        ]
+      : NETWORK_OPTIONS;
+    const diagnostics: string[] = [];
+
+    for (const option of orderedOptions) {
       try {
         await verifyRealLock(lock, option.id);
         const client = rpcClient(option.id);
@@ -115,13 +126,15 @@ export async function PUT(req: Request) {
       } catch (error) {
         // A specific compatibility error means we did find the Lock, so surface it.
         if (error instanceof AppError) throw error;
+        const message = error instanceof Error ? error.message : "Error RPC";
+        diagnostics.push(`${option.name}: ${message}`);
       }
     }
 
     if (!matches.length) {
       throw new AppError(
         400,
-        "No encontramos ese Lock en Base Sepolia, Sepolia, Base ni Polygon. Revisa la dirección; KeyTube detecta la red automáticamente.",
+        `No pudimos leer ese Lock. Si Unlock lo muestra como desplegado, cambia MetaMask a su red y vuelve a intentar. Diagnóstico: ${diagnostics.join(" | ").slice(0, 900)}`,
       );
     }
 

@@ -30,6 +30,7 @@ export const lockAbi = parseAbi([
   "function getHasValidKey(address owner) view returns (bool)",
   "function isLockManager(address account) view returns (bool)",
   "function unlockProtocol() view returns (address)",
+  "function publicLockVersion() view returns (uint16)",
   "function name() view returns (string)",
   "function keyPrice() view returns (uint256)",
   "function tokenAddress() view returns (address)",
@@ -47,10 +48,31 @@ export function chainConfig(network: number) {
   if (!n) throw new Error("Red no admitida.");
   return n;
 }
+const extraRpcUrls: Record<number, string[]> = {
+  11155111: [
+    "https://ethereum-sepolia-rpc.publicnode.com",
+    "https://rpc.sepolia.org",
+    "https://sepolia.drpc.org",
+  ],
+  84532: [
+    "https://base-sepolia-rpc.publicnode.com",
+    "https://sepolia.base.org",
+  ],
+  8453: [
+    "https://base-rpc.publicnode.com",
+    "https://mainnet.base.org",
+  ],
+  137: [
+    "https://polygon-bor-rpc.publicnode.com",
+    "https://polygon-rpc.com",
+  ],
+};
+
 export function rpcClient(network: number) {
   const { chain } = chainConfig(network);
   const urls = Array.from(
     new Set([
+      ...(extraRpcUrls[network] || []),
       ...chain.rpcUrls.default.http,
       ...((chain.rpcUrls as { public?: { http?: readonly string[] } }).public?.http || []),
     ]),
@@ -60,43 +82,52 @@ export function rpcClient(network: number) {
     transport: fallback(
       urls.map((url) =>
         http(url, {
-          timeout: 12000,
+          timeout: 10000,
           retryCount: 1,
         }),
       ),
+      { rank: true },
     ),
   });
 }
+
 export async function verifyRealLock(lock: Address, network: number) {
-  // Do not rely only on a hard-coded factory address when importing a Lock.
-  // PublicLock exposes the Unlock factory that deployed it. We ask that
-  // reported factory whether the Lock is registered. This keeps linking
-  // compatible with Locks created by an older/newer Unlock factory.
+  // A PublicLock is an upgradeable contract. Validating it by asking the
+  // current Unlock factory's `locks` mapping is too strict for imported Locks:
+  // older factories/upgrades can make a real Lock fail that registry check.
+  // Instead, verify bytecode plus the PublicLock-specific interface directly.
   chainConfig(network);
   const client = rpcClient(network);
   const bytecode = await client.getBytecode({ address: lock });
   if (!bytecode || bytecode === "0x")
     throw new Error("No hay un contrato desplegado en esa dirección para esta red.");
 
-  const factory = await client.readContract({
-    address: lock,
-    abi: lockAbi,
-    functionName: "unlockProtocol",
-  });
+  const [version, name, price, duration, token] = await Promise.all([
+    client.readContract({
+      address: lock,
+      abi: lockAbi,
+      functionName: "publicLockVersion",
+    }),
+    client.readContract({ address: lock, abi: lockAbi, functionName: "name" }),
+    client.readContract({ address: lock, abi: lockAbi, functionName: "keyPrice" }),
+    client.readContract({
+      address: lock,
+      abi: lockAbi,
+      functionName: "expirationDuration",
+    }),
+    client.readContract({
+      address: lock,
+      abi: lockAbi,
+      functionName: "tokenAddress",
+    }),
+  ]);
 
-  const registration = await client.readContract({
-    address: factory,
-    abi: factoryAbi,
-    functionName: "locks",
-    args: [lock],
-  });
+  if (Number(version) < 1 || Number(version) > 100)
+    throw new Error("El contrato no parece ser un PublicLock válido.");
+  if (typeof name !== "string" || typeof price !== "bigint" || typeof duration !== "bigint")
+    throw new Error("El contrato no expone la interfaz esperada de Unlock.");
 
-  if (!registration[0])
-    throw new Error(
-      "La dirección no corresponde a un Lock registrado en Unlock para esta red.",
-    );
-
-  return factory;
+  return { version: Number(version), name, price, duration, token };
 }
 export async function getMembership(
   lock: Address,

@@ -2,7 +2,7 @@
 import {useState,useRef,useEffect,type ReactNode,type FormEvent} from 'react';
 import {X,Upload,Check,KeyRound,Mail,ShieldCheck,ArrowRight,LoaderCircle,Camera,Trash2} from 'lucide-react';
 import {Brand,CreatorAvatar} from './keytube-content';
-import {api,connectWallet,signProof,errorText,mediaLabels} from '@/lib/keytube-client';
+import {api,connectWallet,signProof,errorText,mediaLabels,walletNetwork} from '@/lib/keytube-client';
 import {deployPlanLock,updatePlanLock} from '@/lib/lock-client';
 import {videoPreview,audioPreview,imagePreview} from '@/lib/preview-client';
 import {NETWORK_OPTIONS,CATEGORIES,type CreatorPlan,type ContentType,type Asset,type Draft,type PublicPost} from '@/lib/keytube-types';
@@ -41,7 +41,9 @@ export function PlanEditor({slot,existing,sibling,onSaved}:{slot:'basic'|'premiu
   async function inspectLock(address=lock.trim()) {
     if(!/^0x[0-9a-fA-F]{40}$/.test(address))throw new Error('Escribe una dirección de Lock válida.');
     setStatus('Detectando la red y leyendo los datos reales del Lock…');
-    const {inspection}=await api<{inspection:Inspection}>('/api/plans',{lock:address},'PUT');
+    let preferredNetwork=network;
+    try { preferredNetwork=await walletNetwork(); } catch {}
+    const {inspection}=await api<{inspection:Inspection}>('/api/plans',{lock:address,preferredNetwork},'PUT');
     if(sibling&&sibling.network!==inspection.network)throw new Error(`Ese Lock está en ${inspection.networkName}, pero tu otro plan usa otra red.`);
     setNetwork(inspection.network);
     setPrice(inspection.price);
