@@ -4,11 +4,78 @@ type Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   on?: (name: string, handler: (data: unknown) => void) => void;
   removeListener?: (name: string, handler: (data: unknown) => void) => void;
+  providers?: Provider[];
+  isMetaMask?: boolean;
+  isCoinbaseWallet?: boolean;
+  isRabby?: boolean;
 };
 declare global {
   interface Window {
     ethereum?: Provider;
   }
+}
+type Eip6963Announcement = {
+  info?: { uuid?: string; name?: string; rdns?: string };
+  provider?: Provider;
+};
+let selectedProvider: Provider | null = null;
+
+function providerLabel(provider: Provider) {
+  if (provider.isMetaMask) return "MetaMask";
+  if (provider.isRabby) return "Rabby";
+  if (provider.isCoinbaseWallet) return "Coinbase Wallet";
+  return "Wallet del navegador";
+}
+
+function addUniqueProvider(list: Provider[], provider?: Provider) {
+  if (!provider || typeof provider.request !== "function") return;
+  if (!list.includes(provider)) list.push(provider);
+}
+
+async function discoverWalletProvider(): Promise<Provider | null> {
+  if (typeof window === "undefined") return null;
+  if (selectedProvider) return selectedProvider;
+
+  const found: Provider[] = [];
+  const onAnnounce = (event: Event) => {
+    const detail = (event as CustomEvent<Eip6963Announcement>).detail;
+    addUniqueProvider(found, detail?.provider);
+  };
+
+  window.addEventListener("eip6963:announceProvider", onAnnounce as EventListener);
+  try {
+    // EIP-6963 is the modern way MetaMask and other wallets announce providers.
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+    const injected = window.ethereum;
+    if (Array.isArray(injected?.providers)) injected.providers.forEach((p) => addUniqueProvider(found, p));
+    addUniqueProvider(found, injected);
+
+    // Give extensions that inject asynchronously a short chance to announce themselves.
+    for (let i = 0; i < 5 && found.length === 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const late = window.ethereum;
+      if (Array.isArray(late?.providers)) late.providers.forEach((p) => addUniqueProvider(found, p));
+      addUniqueProvider(found, late);
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+    }
+  } finally {
+    window.removeEventListener("eip6963:announceProvider", onAnnounce as EventListener);
+  }
+
+  // Prefer MetaMask because the current KeyTube UI names it explicitly.
+  selectedProvider = found.find((p) => p.isMetaMask) || found[0] || null;
+  return selectedProvider;
+}
+
+async function requireWalletProvider() {
+  const provider = await discoverWalletProvider();
+  if (!provider) {
+    throw new Error(
+      "KeyTube no puede detectar MetaMask en esta pestaña. En Chrome abre Extensiones → MetaMask → Acceso al sitio y permite key-tube.vercel.app (o todos los sitios), recarga la página y vuelve a intentar.",
+    );
+  }
+  return provider;
 }
 export class ApiError extends Error {
   constructor(
@@ -54,44 +121,39 @@ function isUserRejected(error: unknown) {
 }
 
 export async function connectWallet(options: ConnectWalletOptions = {}) {
-  if (!window.ethereum)
-    throw new Error(
-      "Abre KeyTube con una wallet como MetaMask. En el celular, usa el navegador de tu wallet.",
-    );
+  const provider = await requireWalletProvider();
 
-  // eth_requestAccounts often reuses the account that was connected by the
-  // previous KeyTube user in the same browser.  MetaMask's permission request
-  // opens the account selector again, which lets a second KeyTube account pick
-  // its own wallet instead of silently inheriting the first one.
+  // For a second KeyTube user on the same browser, ask MetaMask to show its
+  // account chooser again instead of silently reusing the previous account.
   if (options.chooseAccount) {
     try {
-      await window.ethereum.request({
+      await provider.request({
         method: "wallet_requestPermissions",
         params: [{ eth_accounts: {} }],
       });
     } catch (error) {
       if (isUserRejected(error))
         throw new Error("Selecciona la cuenta de MetaMask que quieres usar con este perfil.");
-      // Other injected wallets may not implement wallet_requestPermissions.
-      // Fall back to the standard connection flow below.
+      // Some wallets do not implement wallet_requestPermissions. Continue with
+      // the standard account request in that case.
     }
   }
 
-  const accounts = (await window.ethereum.request({
-    method: "eth_requestAccounts",
-  })) as string[];
+  const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
   if (!accounts[0] || !isAddress(accounts[0]))
-    throw new Error("No se conectó una wallet.");
+    throw new Error(`No se conectó una cuenta desde ${providerLabel(provider)}.`);
+  selectedProvider = provider;
   return accounts[0] as Address;
 }
 export async function connectedWallet() {
-  if (!window.ethereum) return null;
-  const accounts = (await window.ethereum.request({ method: "eth_accounts" })) as string[];
+  const provider = await discoverWalletProvider();
+  if (!provider) return null;
+  const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
   return accounts[0] && isAddress(accounts[0]) ? (accounts[0] as Address) : null;
 }
 export async function walletNetwork() {
-  if (!window.ethereum) throw new Error("No hay una wallet disponible.");
-  const value = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+  const provider = await requireWalletProvider();
+  const value = (await provider.request({ method: "eth_chainId" })) as string;
   const id = Number.parseInt(value, 16);
   if (![84532, 11155111, 8453, 137].includes(id))
     throw new Error("Cambia tu wallet a Base Sepolia, Sepolia, Base o Polygon.");
@@ -107,7 +169,11 @@ export async function signProof(
     "/api/challenge",
     { purpose, wallet, network, ...data },
   );
-  const signature = await window.ethereum!.request({
+  const provider = await requireWalletProvider();
+  const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+  if (!accounts[0] || accounts[0].toLowerCase() !== wallet.toLowerCase())
+    throw new Error("La cuenta activa de tu wallet cambió. Vuelve a elegir la wallet de este perfil.");
+  const signature = await provider.request({
     method: "personal_sign",
     params: [toHex(c.message), wallet],
   });
