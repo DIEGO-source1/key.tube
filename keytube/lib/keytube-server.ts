@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { getDatabase } from "./neon-db";
 import { z } from "zod";
 import { isAddress, type Address, type Hex } from "viem";
 import { getAppUser } from "@/lib/auth";
@@ -13,12 +13,14 @@ export class AppError extends Error {
   }
 }
 export function db() {
-  if (!env.DB)
+  try {
+    return getDatabase();
+  } catch {
     throw new AppError(
       503,
-      "El almacenamiento no está disponible. Intenta nuevamente.",
+      "La base de datos no está disponible. Revisa DATABASE_URL.",
     );
-  return env.DB;
+  }
 }
 export const addressSchema = z
   .string()

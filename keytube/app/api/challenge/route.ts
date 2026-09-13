@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       target = post.id;
     }
     const requester = await hash(
-      userId || req.headers.get("cf-connecting-ip") || data.wallet,
+      userId || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || data.wallet,
     );
     await db()
       .prepare("DELETE FROM challenges WHERE created_at < ?")

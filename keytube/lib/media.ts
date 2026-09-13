@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { getMediaStore } from "./neon-bucket";
 import { AppError, db, hash } from "./keytube-server";
 import type { StoredPost } from "./keytube-server";
 export type StoredAsset = {
@@ -13,12 +13,14 @@ export type StoredAsset = {
 };
 export const MAX_UPLOAD = 20 * 1024 * 1024;
 export function bucket() {
-  if (!env.BUCKET)
+  try {
+    return getMediaStore();
+  } catch {
     throw new AppError(
       503,
       "El almacenamiento de archivos no está disponible.",
     );
-  return env.BUCKET;
+  }
 }
 export async function getAsset(id: string) {
   const a = await db()

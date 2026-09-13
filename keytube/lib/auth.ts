@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { getDatabase } from './neon-db';
 import { headers } from 'next/headers';
 import { scryptAsync } from '@noble/hashes/scrypt';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
@@ -11,8 +11,7 @@ export async function digest(value: string) {
   return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))));
 }
 export function authDB() {
-  if (!env.DB) throw new Error('La base de datos no está disponible.');
-  return env.DB;
+  return getDatabase();
 }
 export function cookieValue(cookie: string | null, name: string) {
   return (cookie || '').split(';').map(x => x.trim()).find(x => x.startsWith(name + '='))?.slice(name.length + 1) || '';
@@ -58,7 +57,7 @@ export async function checkPassword(password: string, encoded: string | null) {
 }
 export async function authRateLimit(req: Request, email = '') {
   const now = Date.now(), window = Math.floor(now/600000);
-  const ip = req.headers.get('cf-connecting-ip') || 'local';
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('cf-connecting-ip') || 'local';
   const keys = [await digest(`ip:${ip}:${window}`), ...(email ? [await digest(`account:${email}:${window}`)] : [])];
   for (const key of keys) {
     const row = await authDB().prepare('INSERT INTO auth_limits (key,count,expires_at) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count').bind(key, now+1200000).first<{count:number}>();
@@ -67,6 +66,9 @@ export async function authRateLimit(req: Request, email = '') {
   await authDB().prepare('DELETE FROM auth_limits WHERE expires_at < ?').bind(now).run();
 }
 export function googleConfig() {
-  const e = env as unknown as Record<string,string|undefined>;
-  return { clientId:e.GOOGLE_CLIENT_ID, secret:e.GOOGLE_CLIENT_SECRET, origin:e.APP_ORIGIN };
+  return {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    secret: process.env.GOOGLE_CLIENT_SECRET,
+    origin: process.env.APP_ORIGIN,
+  };
 }
