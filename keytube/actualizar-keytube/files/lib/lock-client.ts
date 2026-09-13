@@ -2,7 +2,7 @@
 import {createWalletClient,custom,encodeFunctionData,parseAbi,parseEther,decodeEventLog,zeroAddress,type Address} from 'viem';
 import {chainConfig,rpcClient} from './unlock';
 import {requireWalletAccount} from './wallet-connection';
-const factoryAbi=parseAbi(['function publicLockLatestVersion() view returns (uint16)','function createUpgradeableLockAtVersion(bytes data,uint16 version) returns (address)','event NewLock(address indexed lockOwner,address indexed newLockAddress)']);
+const factoryAbi=parseAbi(['function createUpgradeableLockAtVersion(bytes data,uint16 version) returns (address)','event NewLock(address indexed lockOwner,address indexed newLockAddress)']);
 const manageAbi=parseAbi([
   'function initialize(address,uint256,address,uint256,uint256,string)',
   'function keyPrice() view returns (uint256)',
@@ -27,12 +27,9 @@ export async function prepareWallet(network:number,account:Address) {
 export async function deployPlanLock(input:{name:string;price:string;durationDays:number;network:number},account:Address,onStatus:(s:string)=>void) {
   const wallet=await prepareWallet(input.network,account),client=rpcClient(input.network);
   const {factory}=chainConfig(input.network);
-  onStatus('Comprobando la versión de Unlock disponible en esta red…');
-  const version=await client.readContract({address:factory as Address,abi:factoryAbi,functionName:'publicLockLatestVersion'});
-  if(!version)throw new Error('Unlock no tiene una versión disponible para crear este Lock.');
   const data=encodeFunctionData({abi:manageAbi,functionName:'initialize',args:[account,BigInt(input.durationDays*86400),zeroAddress,parseEther(input.price),BigInt(1000),input.name]});
   onStatus('Confirma la creación del Lock en tu wallet.');
-  const hash=await wallet.writeContract({address:factory as Address,abi:factoryAbi,functionName:'createUpgradeableLockAtVersion',args:[data,version]});
+  const hash=await wallet.writeContract({address:factory as Address,abi:factoryAbi,functionName:'createUpgradeableLockAtVersion',args:[data,15]});
   onStatus('Esperando la confirmación de la red…');
   const receipt=await client.waitForTransactionReceipt({hash,timeout:180000});
   if(receipt.status!=='success')throw new Error('La creación del Lock no se completó.');

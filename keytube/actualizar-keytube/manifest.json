@@ -3,39 +3,151 @@
   "files": [
     {
       "path": "README.md",
-      "sha256": "328f7513b8ae843252cfb3a4b65930e03f99b88edbfcda8703c28eec6152a20e"
+      "sha256": "b50b9711c15fc43ec2ca6289f4e483a3173a0b25e78e76c739ad5ae1bd0ce106"
+    },
+    {
+      "path": "app/api/account/route.ts",
+      "sha256": "4fbca56025ac5807ddb6b081695e0eee655a730261c13b7953e10ed0fd78290e"
+    },
+    {
+      "path": "app/api/comments/route.ts",
+      "sha256": "6e0de50ed9000e18a52a292f1974f728cc756a3d5d5c7f1fe21c5ab9222317c9"
+    },
+    {
+      "path": "app/api/media/[id]/route.ts",
+      "sha256": "70f1e77ec2721e776033358718fbb3803b20979a04c643b29a856af9caacbbcc"
+    },
+    {
+      "path": "app/api/posts/route.ts",
+      "sha256": "6ca84bad1406b176e12553d97ca4f4b4f07d77689fc1436b8de5d18a1aa3ce93"
+    },
+    {
+      "path": "app/api/social/route.ts",
+      "sha256": "eae6f44c8068d0e50567d59c0a09e6e2c97db38933e05d42ef0accc45b27f2d1"
+    },
+    {
+      "path": "app/api/studio/route.ts",
+      "sha256": "edfad5f770c0be53334306b9bc72d80e4ad5d46329c9a0f493b6bbb47f333bbc"
+    },
+    {
+      "path": "app/api/uploads/multipart/[id]/route.ts",
+      "sha256": "ff662fbfb08278f27f3cad2432ab27ddc499f0ae9a0e51c64555c4bb09aa7086"
+    },
+    {
+      "path": "app/api/uploads/multipart/route.ts",
+      "sha256": "5e834e09a3093ec7d50329c37df50675aa77eb24cae0725477ae219be10e5346"
+    },
+    {
+      "path": "app/api/uploads/route.ts",
+      "sha256": "01d74b356550f7bcfdf32ef9e9730728849c2b69c155c1e1fc6430c8944198a7"
+    },
+    {
+      "path": "app/keytube-v2.css",
+      "sha256": "9f4f00483e1847251b72b7dad24924639e93e5d0035cb7618548ca83468d25fa"
+    },
+    {
+      "path": "app/keytube-v2.tsx",
+      "sha256": "ff1ecdeb183865a105594bc4cd41d395d1c8d86ef0a466733bfab49a80dc08b5"
+    },
+    {
+      "path": "components/keytube-feed.tsx",
+      "sha256": "7718e4138143f0161f909be2557230fcbb75400dbb018bbd724fe8cd7603c47a"
     },
     {
       "path": "components/keytube-forms.tsx",
-      "sha256": "952469c3e9f97b04926b64942a6df140fcafd129a111731219c3dbc447907773"
+      "sha256": "a6ee79b866ae05e5cc1ec5b251b3d6e4d871535c0a1a85f4c7bc0d69e52cf6dd"
+    },
+    {
+      "path": "components/keytube-post-settings.tsx",
+      "sha256": "062f13ed2e2f817ce3bf81122075755c4c4c9fcbada9cea10855c1f0ad451b84"
+    },
+    {
+      "path": "components/keytube-profile.tsx",
+      "sha256": "49c3def695438d3c43a5d7cbe64627eea159c58eada761d608cb0a3a22932735"
+    },
+    {
+      "path": "components/keytube-wallet.tsx",
+      "sha256": "3d3073519b7812406ab7c81e8ad90ae5b02650d235909f14d05b5be1dbb39882"
+    },
+    {
+      "path": "db/schema.ts",
+      "sha256": "392851116d57b28af04501a90c92fe9bc69cf735af37bdf6a0a93b5857b12ef2"
+    },
+    {
+      "path": "drizzle/0004_brown_excalibur.sql",
+      "sha256": "1dc5d4e9fc7c1bce245f0db5915a24f41be0a212cfe0b0935261e26c5981c5fd"
+    },
+    {
+      "path": "drizzle/meta/0004_snapshot.json",
+      "sha256": "94b604a393c519f47dfd15845147e4f1d76264ab24f0e22b89bb19eaf13ecd99"
+    },
+    {
+      "path": "drizzle/meta/_journal.json",
+      "sha256": "e10980c45a35d97727c1e958bd4fa00302f80621320fc24857f4b3f514971d5f"
+    },
+    {
+      "path": "lib/keytube-client.ts",
+      "sha256": "14951a45ecb8f392ac5ebff1369c5ad4f799c05f470eb99a4093ccd6477b8f40"
     },
     {
       "path": "lib/keytube-server.ts",
-      "sha256": "85f3c97289ff38ea337bc3fa3c009ffbe3e61c27bb92feff6a3c83836e43a8b1"
+      "sha256": "d3daf32a851536a60b43f7b140e138de1dbcd727234b426ba218805a12a53faf"
     },
     {
       "path": "lib/keytube-types.ts",
-      "sha256": "6f9fc791d9ab456cd9850ff3bce5a53e638d0ad275265bff8ec17a862f985b44"
+      "sha256": "6d9699524eea7207b24cacdfc0f3ac4ce3227cc8ebe35ce4d71c4abc2b265a15"
     },
     {
       "path": "lib/lock-client.ts",
-      "sha256": "7f1c9985c8f47d5a5e753c0195ec4c9ec94ba1d999faf868a241f40883111d8a"
+      "sha256": "b4d768ed15472d09ea0b3a4b637fa52b9b59d6a6bc43bc4c54910144f55fed81"
     },
     {
-      "path": "lib/unlock.ts",
-      "sha256": "12c0155c2a3c22cdaae0f11cd4d05400bcf8ad085f53acaf6598a16a2cdfbbde"
+      "path": "lib/media.ts",
+      "sha256": "8eec80565ad984cf51509e8d2fdb8d4b51a6c0db50fbbcfc4a05b5651becc63f"
     },
     {
-      "path": "scripts/start-local.mjs",
-      "sha256": "cf797f86ed8fb7c3e6632224245c56a1bf5e30b69c5b4518f61d6c2e8d75ad2c"
+      "path": "lib/multipart.ts",
+      "sha256": "41b10120327563764030299ccad36fc9e8f80cf1901c3adad5052256cbf0b400"
+    },
+    {
+      "path": "lib/plans.ts",
+      "sha256": "95941ba60c175562b91e276b6a0512c12442557dcf299106163477630939f881"
+    },
+    {
+      "path": "lib/upload-client.ts",
+      "sha256": "4caf4ada8161592cbd70e75341832f33a00c252845c8ed9b7128b46ef2ac8ac6"
+    },
+    {
+      "path": "lib/upload-limits.ts",
+      "sha256": "00f2512e8e2ab4f9c63cc8863c4dd94843588ef8194ff0e0cd92a33855381945"
+    },
+    {
+      "path": "lib/wallet-connection.ts",
+      "sha256": "9498e4a39e18c95369cd230ca136ab15d998c993893a36f5bf08f173cee98224"
+    },
+    {
+      "path": "scripts/export-database.mjs",
+      "sha256": "4c2da10f43cc3943f257c2b27af21979ce6a3f26de61709aa52c3afad5e8c109"
+    },
+    {
+      "path": "scripts/install-feed-update.mjs",
+      "sha256": "f2047207f3af9402ed71571fde161dbc6a912b438615c7c651f62514cb707c8e"
     },
     {
       "path": "scripts/test.mjs",
-      "sha256": "f92b1cbb5be02895c7fbdaee1dbea72973177a16df60e130d0535b0c4e8cbc65"
+      "sha256": "da07cdbfc8835d51613c5aaf9f75544313598b0c9c0c9420dc9b6b5ea2af3e6c"
     },
     {
-      "path": "tests/ethereum.mjs",
-      "sha256": "1de0f122ba94d85a0c8ba6e28af06f23bbd00e3f4aca95598cf707ab1e9b6739"
+      "path": "tests/runtime.mjs",
+      "sha256": "614d517b0707a3f5607d603086bc911e187f99931cd5d5005f72f770e08b1864"
+    },
+    {
+      "path": "tests/uploads-controls.mjs",
+      "sha256": "db2a2b08b8ffd7d12d63007516cf27904c167b10e3cf1caefaccd2f9fda56499"
+    },
+    {
+      "path": "tests/wallet.mjs",
+      "sha256": "888cbeff47e056a684cc6cca6cfcd0b247a05f0d8a14970c6ae03afdb9175527"
     }
   ],
   "remove": []

@@ -92,7 +92,7 @@ Límites: **500 MB por archivo completo**, **20 MB por portada o adelanto**, **2
 
 1. Regístrate y abre **Mis planes**.
 2. Completa nombre, beneficios, formatos, precio y duración de Básico.
-3. Para una demo, elige Base Sepolia o Sepolia y una wallet con ETH de prueba para gas. Ethereum (red principal), Base y Polygon utilizan fondos reales. Los nuevos planes seleccionan Ethereum por defecto; los planes existentes conservan su red. En Ethereum se necesita ETH en Ethereum Mainnet para las comisiones.
+3. Para una demo, elige Base Sepolia o Sepolia y una wallet con ETH de prueba para gas. Base y Polygon utilizan fondos reales.
 4. Pulsa **Crear Lock y guardar plan**. Confirma la transacción y después la firma que vincula el plan a tu cuenta. Se crea un PublicLock versión 15 con capacidad inicial de 1000 Keys.
 5. Si ya tienes un Lock, marca **Ya tengo un Lock**, pega su dirección y coloca su precio y duración exactos. Tu wallet debe ser LockManager.
 6. Repite para Premium con la misma wallet y red, pero otro Lock. Premium debe cubrir los formatos incluidos en Básico.
