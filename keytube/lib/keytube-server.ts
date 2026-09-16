@@ -176,7 +176,14 @@ export function publicPost(p: StoredPost) {
     type: p.type || "text",
     category: p.category || "Educación",
     thumbnail_url: p.thumbnail_id ? `/api/media/${p.thumbnail_id}` : undefined,
-    preview_url: p.preview_id ? `/api/media/${p.preview_id}` : undefined,
+    // En contenido gratuito el feed puede reproducir/mostrar el archivo completo.
+    // En contenido de miembros solo se publica el adelanto seguro.
+    preview_url:
+      p.visibility === "free" && p.asset_id
+        ? `/api/media/${p.asset_id}?public=${p.id}`
+        : p.preview_id
+          ? `/api/media/${p.preview_id}`
+          : undefined,
   };
 }
 export async function consumeProof(

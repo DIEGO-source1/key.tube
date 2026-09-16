@@ -170,7 +170,7 @@ export function ProfileEditor({
 
 const mimeByExt:Record<string,string>={mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime',m4v:'video/x-m4v',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',aac:'audio/aac',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',pdf:'application/pdf',txt:'text/plain'};
 export function Publisher({creator,plans,onPublished}:{creator:string;plans:CreatorPlan[];onPublished:(p:PublicPost)=>void}) {
-  const [type,setType]=useState<ContentType>('video'),[title,setTitle]=useState(''),[intro,setIntro]=useState(''),[body,setBody]=useState(''),[category,setCategory]=useState('Viajes'),[access,setAccess]=useState('free'),[file,setFile]=useState<File|null>(null),[cover,setCover]=useState<File|null>(null),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState(''),[previewNote,setPreviewNote]=useState('');
+  const [type,setType]=useState<ContentType>('video'),[title,setTitle]=useState(''),[intro,setIntro]=useState(''),[body,setBody]=useState(''),[category,setCategory]=useState('Viajes'),[access,setAccess]=useState('free'),[file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState(''),[previewNote,setPreviewNote]=useState('');
   async function uploadSmall(f:File,role:string){const mime=f.type.split(';')[0]||mimeByExt[f.name.split('.').pop()?.toLowerCase()||''];if(f.size>20*1024*1024)throw new Error('Portadas y adelantos deben pesar como máximo 20 MB.');const r=await fetch(`/api/uploads?role=${role}`,{method:'POST',headers:{'Content-Type':mime,'X-File-Name':encodeURIComponent(f.name)},body:f});const data=await r.json() as {asset:Asset;error?:string};if(!r.ok)throw new Error(data.error||'No se pudo subir el archivo.');return data.asset.id;}
   async function uploadFull(f:File){
     const mime=(f.type.split(';')[0]||mimeByExt[f.name.split('.').pop()?.toLowerCase()||'']).toLowerCase();
@@ -207,13 +207,15 @@ export function Publisher({creator,plans,onPublished}:{creator:string;plans:Crea
     setStatus(file&&file.size>8*1024*1024?'Subiendo directamente al almacenamiento seguro. No cierres esta pestaña…':'Subiendo los archivos…');
     if(file)assetId=await uploadFull(file);
     if(generated)previewId=await uploadSmall(generated,'preview');
-    let preparedCover:File|undefined;
-    if(cover){
-      setStatus('Optimizando la portada…');
-      preparedCover=await optimizeImage(cover,1600,3.2*1024*1024);
+    // La portada ya no se elige manualmente. KeyTube la prepara automáticamente
+    // desde el propio contenido para que publicar desde móvil sea más simple.
+    if(file&&!generatedCover&&type==='video'){
+      try{generatedCover=await videoCover(file);}catch{}
     }
-    if(preparedCover||generatedCover)thumbnailId=await uploadSmall((preparedCover||generatedCover)!,'thumbnail');
-    else if(file&&type==='image')thumbnailId=await uploadSmall(await optimizeImage(file,1600,3.2*1024*1024),'thumbnail');
+    if(file&&!generatedCover&&type==='image'){
+      try{generatedCover=await optimizeImage(file,1600,3.2*1024*1024);}catch{}
+    }
+    if(generatedCover)thumbnailId=await uploadSmall(generatedCover,'thumbnail');
     const draft:Draft={creator,title,intro,body,visibility:plan?'members':'free',planId:plan?.id||null,lock:plan?.lock||'',network:plan?.network||84532,type,category,assetId,previewId,thumbnailId};
     setStatus('Guardando tu publicación…');
     const result=await api<{post:PublicPost}>('/api/posts',{draft});onPublished(result.post);
@@ -228,7 +230,7 @@ export function Publisher({creator,plans,onPublished}:{creator:string;plans:Crea
     {!plans.length&&<p className="k2-small">Para publicar contenido exclusivo, crea primero tus planes en «Mis planes».</p>}
     <p className="k2-small k2-mobile-upload-help">En móvil la subida va directamente al almacenamiento de KeyTube. Puedes publicar sin conectar MetaMask. Para video, MP4 H.264 ofrece la mejor compatibilidad entre dispositivos.</p>
     {previewNote&&<p className="k2-notice" role="status">{previewNote}</p>}
-    <label>Portada pública (opcional)<input type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif" onChange={e=>setCover(e.target.files?.[0]||null)}/></label>
+    <p className="k2-small k2-auto-cover-note">No necesitas añadir portada: KeyTube usa automáticamente el video o la imagen y, cuando hace falta, genera una vista previa desde el propio archivo.</p>
     <button className="k2-primary" disabled={busy}>{busy?<LoaderCircle className="k2-spin" size={18}/>:<Upload size={18}/>} {busy?'Preparando publicación…':'Publicar contenido'}</button>
   </fieldset>{status&&<p className="k2-notice" role="status">{status}</p>}{error&&<p className="k2-error" role="alert">{error}</p>}</form>;
 }

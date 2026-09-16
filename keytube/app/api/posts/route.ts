@@ -53,7 +53,7 @@ export async function GET(req: Request) {
 
     const sort = sortSchema.parse(query.get("sort") || "newest");
     const fields =
-      "id, owner_id, wallet, creator, title, intro, lock, network, created_at, views, type, category, thumbnail_id, preview_id, visibility, plan_id, premium_lock";
+      "id, owner_id, wallet, creator, title, intro, lock, network, created_at, views, type, category, thumbnail_id, preview_id, asset_id, visibility, plan_id, premium_lock";
     const order = sortSql[sort];
     const querySQL = mine
       ? db()

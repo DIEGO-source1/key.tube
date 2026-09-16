@@ -10,6 +10,9 @@ import {
   Download,
   ArrowUpRight,
   Eye,
+  Volume2,
+  VolumeX,
+  Maximize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PublicPost, FullContent } from "@/lib/keytube-types";
@@ -57,6 +60,137 @@ export function CreatorAvatar({
     </span>
   );
 }
+function FeedMedia({ post, onOpen }: { post: PublicPost; onOpen: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+  const [previewEnded, setPreviewEnded] = useState(false);
+  const type = post.type || "text";
+  const mediaUrl = post.preview_url;
+
+  useEffect(() => { setPreviewEnded(false); }, [post.id, mediaUrl]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || type !== "video" || !mediaUrl) return;
+    const pauseWhenAnotherPlays = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (detail !== post.id) video.pause();
+    };
+    window.addEventListener("keytube-feed-play", pauseWhenAnotherPlays);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.62 && !previewEnded) {
+          window.dispatchEvent(new CustomEvent("keytube-feed-play", { detail: post.id }));
+          void video.play().catch(() => undefined);
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: [0, 0.35, 0.62, 0.85, 1] },
+    );
+    observer.observe(video);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("keytube-feed-play", pauseWhenAnotherPlays);
+      video.pause();
+    };
+  }, [mediaUrl, post.id, previewEnded, type]);
+
+  if (type === "video" && mediaUrl) {
+    return (
+      <div className={`kt-feed-media kt-feed-video ${previewEnded ? "ended" : ""}`}>
+        <video
+          ref={videoRef}
+          src={mediaUrl}
+          poster={post.thumbnail_url}
+          muted={muted}
+          playsInline
+          preload="metadata"
+          loop={post.visibility === "free"}
+          onPlay={() => window.dispatchEvent(new CustomEvent("keytube-feed-play", { detail: post.id }))}
+          onEnded={() => {
+            if (post.visibility !== "free") setPreviewEnded(true);
+          }}
+          onClick={event => {
+            const video = event.currentTarget;
+            if (video.paused) void video.play().catch(() => undefined);
+            else video.pause();
+          }}
+        />
+        <div className="kt-feed-video-actions">
+          <button
+            type="button"
+            className="kt-feed-media-action"
+            aria-label={muted ? "Activar sonido" : "Silenciar"}
+            onClick={event => {
+              event.stopPropagation();
+              const next = !muted;
+              setMuted(next);
+              if (videoRef.current) {
+                videoRef.current.muted = next;
+                if (!next) void videoRef.current.play().catch(() => undefined);
+              }
+            }}
+          >
+            {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+          </button>
+          <button type="button" className="kt-feed-media-action" aria-label="Abrir publicación" onClick={onOpen}>
+            <Maximize2 size={17} />
+          </button>
+        </div>
+        <span className="kt-feed-media-label">
+          {post.visibility === "free" ? "Reproducción automática" : "Adelanto para miembros"}
+        </span>
+        {previewEnded && (
+          <button type="button" className="kt-feed-preview-ended" onClick={onOpen}>
+            <LockKeyhole size={25} />
+            <strong>Adelanto terminado</strong>
+            <span>Abre la publicación para desbloquear el video completo.</span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (type === "image" && (mediaUrl || post.thumbnail_url)) {
+    return (
+      <button type="button" className="kt-feed-media kt-feed-image" onClick={onOpen} aria-label={`Abrir ${post.title}`}>
+        <img src={post.thumbnail_url || mediaUrl} alt={post.title} loading="lazy" />
+        {post.visibility !== "free" && <span className="kt-feed-media-label">Vista previa</span>}
+      </button>
+    );
+  }
+
+  if (type === "audio" && mediaUrl) {
+    return (
+      <div className="kt-feed-media kt-feed-audio">
+        <Headphones size={30} />
+        <div>
+          <strong>{post.title}</strong>
+          <small>{post.visibility === "free" ? "Audio completo" : "Adelanto de audio"}</small>
+          <audio controls preload="metadata" src={mediaUrl} />
+        </div>
+      </div>
+    );
+  }
+
+  const Icon =
+    type === "audio" ? Headphones : type === "image" ? ImageIcon : type === "text" || type === "document" ? FileText : Play;
+  return (
+    <button type="button" className="kt-feed-media kt-feed-generated" onClick={onOpen} aria-label={`Abrir ${post.title}`}>
+      {post.thumbnail_url ? (
+        <img src={post.thumbnail_url} alt="" loading="lazy" />
+      ) : (
+        <span className={`kt-generated-cover ${type}`}>
+          <Icon size={54} />
+          <span>{post.category}</span>
+        </span>
+      )}
+      <span className="kt-thumb-play"><Icon size={26} fill={type === "video" ? "currentColor" : "none"} /></span>
+    </button>
+  );
+}
+
 export function ContentCard({
   post,
   saved,
@@ -72,14 +206,6 @@ export function ContentCard({
   onSave: () => void;
   onCreator: () => void;
 }) {
-  const Icon =
-    post.type === "audio"
-      ? Headphones
-      : post.type === "image"
-        ? ImageIcon
-        : post.type === "text" || post.type === "document"
-          ? FileText
-          : Play;
   const published = new Date(post.created_at).toLocaleDateString("es-BO", {
     day: "2-digit",
     month: "short",
@@ -119,29 +245,7 @@ export function ContentCard({
         </div>
       </div>
 
-      <div className="kt-thumb">
-        <button
-          className="kt-open-thumbnail"
-          onClick={onOpen}
-          aria-label={`Abrir ${post.title}`}
-        >
-          {post.thumbnail_url ? (
-            <img src={post.thumbnail_url} alt="" loading="lazy" />
-          ) : (
-            <span className={`kt-generated-cover ${post.type || "text"}`}>
-              <Icon size={54} />
-              <span>{post.category}</span>
-            </span>
-          )}
-          <span className="kt-thumb-play">
-            <Icon
-              size={26}
-              fill={post.type === "video" ? "currentColor" : "none"}
-            />
-          </span>
-          {post.duration && <span className="kt-duration">{post.duration}</span>}
-        </button>
-      </div>
+      <FeedMedia post={post} onOpen={onOpen} />
 
       <footer className="kt-feed-card-footer">
         <span className="kt-card-views"><Eye size={14} /> {post.views || 0} vistas</span>
