@@ -13,8 +13,8 @@ const schema = z.object({
   size: z.number().int().positive().max(MAX_FULL_UPLOAD),
 });
 const allowed = new Set([
-  "video/mp4", "video/webm",
-  "audio/mpeg", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm",
+  "video/mp4", "video/webm", "video/quicktime", "video/x-m4v",
+  "audio/mpeg", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm", "audio/mp4", "audio/aac",
   "image/jpeg", "image/png", "image/webp",
   "application/pdf", "text/plain",
 ]);

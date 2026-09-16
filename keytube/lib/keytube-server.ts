@@ -65,12 +65,6 @@ export const draftSchema = z
         path: ["assetId"],
         message: "Sube el archivo completo antes de publicar.",
       });
-    if (d.visibility !== "free" && ["video", "audio", "image"].includes(d.type) && !d.previewId)
-      ctx.addIssue({
-        code: "custom",
-        path: ["previewId"],
-        message: "Sube un adelanto separado del archivo completo.",
-      });
   });
 export const proofSchema = z.object({
   challengeId: z.string().uuid(),

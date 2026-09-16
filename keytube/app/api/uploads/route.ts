@@ -80,8 +80,8 @@ export async function POST(req: Request) {
           ? "La foto de perfil debe ser JPG, PNG o WEBP."
           : "La portada debe ser JPG, PNG o WEBP.",
       );
-    if (role === "preview" && !["video/webm", "audio/webm", "audio/wav", "audio/x-wav"].includes(mime))
-      throw new AppError(400, "El adelanto automático debe ser WebM o WAV.");
+    if (role === "preview" && !["video/webm", "video/mp4", "audio/webm", "audio/mp4", "audio/wav", "audio/x-wav"].includes(mime))
+      throw new AppError(400, "El adelanto automático debe ser WebM, MP4, M4A o WAV.");
     const id = crypto.randomUUID(),
       storageKey = `${role}/${id}`;
     await bucket().put(storageKey, buffer, {

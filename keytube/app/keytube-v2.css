@@ -148,3 +148,32 @@
   .kt-feed-index{min-width:34px;height:26px;font-size:9px}
   .kt-feed-creator .kt-avatar{width:36px!important;height:36px!important}
 }
+
+/* KeyTube v16: experiencia móvil y publicación sin wallet */
+.k2-mobile-upload-help{justify-content:flex-start;text-align:left;line-height:1.55;color:#8fa6c6}
+@supports (padding: max(0px)){
+  .k2-topbar{padding-top:max(13px,env(safe-area-inset-top))}
+  .k2-main{padding-bottom:max(30px,env(safe-area-inset-bottom))}
+}
+@media(max-width:740px){
+  .k2-app{min-width:0;overflow-x:hidden}
+  .k2-main{width:100%;max-width:100%;padding-left:12px;padding-right:12px}
+  .k2-publisher{width:100%;max-width:100%;padding:15px 13px;border-radius:12px}
+  .k2-publisher fieldset{gap:15px}
+  .k2-type-picker{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .k2-type-picker button{min-height:46px;padding:11px 7px;font-size:12px}
+  .k2-columns,.k2-plan-editor .k2-columns{grid-template-columns:minmax(0,1fr)}
+  .k2-form input:not([type=checkbox]),.k2-form textarea,.k2-form select,.k2-comments input{font-size:16px;min-height:46px}
+  .k2-form input[type=file]{font-size:14px;min-height:48px;padding:8px 0;max-width:100%}
+  .k2-form input::file-selector-button{min-height:40px;padding:9px 11px;margin-right:8px}
+  .k2-form .k2-dropzone{min-height:170px;padding:20px 10px}
+  .k2-dropzone input[type=file]{width:100%;max-width:100%}
+  .k2-primary,.k2-secondary{min-height:46px;font-size:13px}
+  .k2-publisher>.k2-primary,.k2-publisher fieldset>.k2-primary{width:100%}
+  .k2-profile-card{width:100%;max-width:100%;padding:18px 14px}
+  .k2-profile-photo-row{padding:14px}
+  .k2-modal{width:min(100% - 12px,720px);max-height:calc(100dvh - 12px)}
+  .k2-modal-body{padding:25px 16px}
+  .k2-toast{max-width:calc(100vw - 24px);white-space:normal;line-height:1.4}
+  .k2-grid .kt-feed-card .kt-thumb{aspect-ratio:16/9}
+}

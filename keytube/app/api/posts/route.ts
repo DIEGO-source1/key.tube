@@ -3,20 +3,16 @@ import { getAppUser } from "@/lib/auth";
 import {
   db,
   draftSchema,
-  proofSchema,
-  consumeProof,
   requireCreator,
   sameOrigin,
   readJson,
   response,
   failure,
-  hash,
   AppError,
   type StoredPost,
   publicPost,
   getPost,
 } from "@/lib/keytube-server";
-import { verifyRealLock, rpcClient, lockAbi } from "@/lib/unlock";
 import { ownerPlans } from "@/lib/plans";
 import { validateAssets } from "@/lib/media";
 import type { Address } from "viem";
@@ -84,49 +80,25 @@ export async function POST(req: Request) {
       premiumLock: string | null = null;
 
     if (draft.visibility === "members") {
-      const proof = proofSchema.parse(data);
-      await consumeProof(
-        req,
-        proof,
-        "publish",
-        await hash(JSON.stringify(draft)),
-        draft.network,
-        user.userId,
-      );
-      wallet = proof.wallet;
-      await verifyRealLock(draft.lock as Address, draft.network);
-      const manager = await rpcClient(draft.network).readContract({
-        address: draft.lock as Address,
-        abi: lockAbi,
-        functionName: "isLockManager",
-        args: [wallet],
-      });
-      if (!manager)
-        throw new AppError(
-          403,
-          "La wallet conectada debe administrar este Lock.",
-        );
-      if (draft.planId) {
-        const plans = await ownerPlans(user.userId);
-        const plan = plans.find((p) => p.id === draft.planId);
-        if (
-          !plan ||
-          plan.lock !== draft.lock ||
-          plan.network !== draft.network ||
-          plan.wallet !== wallet
-        )
-          throw new AppError(
-            403,
-            "El plan no pertenece a tu cuenta o a esta wallet.",
-          );
-        if (!(JSON.parse(plan.coverage) as string[]).includes(draft.type))
-          throw new AppError(
-            400,
-            "Este formato no está incluido en el plan seleccionado.",
-          );
-        if (plan.slot === "basic")
-          premiumLock = plans.find((p) => p.slot === "premium")?.lock || null;
-      }
+      if (!draft.planId)
+        throw new AppError(400, "Selecciona uno de tus planes de membresía.");
+      const plans = await ownerPlans(user.userId);
+      const plan = plans.find((item) => item.id === draft.planId);
+      if (!plan)
+        throw new AppError(403, "Ese plan no pertenece a tu cuenta de KeyTube.");
+      if (
+        plan.lock.toLowerCase() !== draft.lock.toLowerCase() ||
+        plan.network !== draft.network
+      )
+        throw new AppError(400, "El Lock de la publicación no coincide con el plan elegido.");
+      if (!(JSON.parse(plan.coverage) as string[]).includes(draft.type))
+        throw new AppError(400, "Este formato no está incluido en el plan seleccionado.");
+
+      // La propiedad del Lock ya fue verificada con firma al crear/vincular el plan.
+      // Publicar desde un teléfono no vuelve a abrir MetaMask.
+      wallet = plan.wallet as Address;
+      if (plan.slot === "basic")
+        premiumLock = plans.find((item) => item.slot === "premium")?.lock || null;
     } else {
       draft.lock = "";
       draft.planId = null;
