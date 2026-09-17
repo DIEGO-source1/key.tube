@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "release": "VIDEO-PREVIEW-8",
+  "source": "0de75e6e0d3da1488a051252406a7b78decf62ec",
+  "files": [
+    {
+      "path": "components/keytube-forms.tsx",
+      "sha256": "69cbe9af07e9effd18d3e4995d80552690411a25629e9e032e8861f9377417ff"
+    },
+    {
+      "path": "lib/preview-client.ts",
+      "sha256": "345c35af019534553d6d69889db7329238a1c7d484ac0ee95e9330c75b110a53"
+    },
+    {
+      "path": "lib/webm-preview.ts",
+      "sha256": "c3e9e93cd58bb1de2d0caa5311e85f938bbf015d3b2a28d1daeb48b9196a550c"
+    },
+    {
+      "path": "lib/preview-validation.ts",
+      "sha256": "2cce7bdd45066b6f3b7efe9fd774ef732c96de0b953ae2a1530e9e334cd4024e"
+    }
+  ],
+  "remove": []
+}

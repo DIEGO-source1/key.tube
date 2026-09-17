@@ -1,0 +1,15 @@
+KEYTUBE - ARRANQUE ESTABLE V2
+
+Para una instalación que ya terminó pnpm.cmd build correctamente.
+1. Cierra el servidor con Ctrl+C si sigue funcionando.
+2. Extrae este ZIP dentro de tu carpeta keytube instalada y reemplaza el archivo.
+3. Desde PowerShell, dentro de keytube, ejecuta:
+
+node .\scripts\start-local.mjs
+
+Espera: Conexión HTTP comprobada. Arranque estable v2.
+Abre http://127.0.0.1:5173 y deja la terminal abierta.
+Si termina con un error, conserva el mensaje que aparece antes de PS C:\...>.
+
+Este ZIP solo reemplaza scripts/start-local.mjs. Conserva cuentas, planes,
+archivos, base de datos y dependencias. No requiere otra compilación.

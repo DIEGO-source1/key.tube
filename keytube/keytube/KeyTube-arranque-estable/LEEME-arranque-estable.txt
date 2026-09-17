@@ -1,0 +1,6 @@
+Detén el servidor con Ctrl+C. Extrae este ZIP dentro de tu carpeta keytube ya instalada.
+Ejecuta: node .\scripts\start-local.mjs
+Abre http://127.0.0.1:5173 cuando indique KeyTube listo.
+Usa este comando para abrir KeyTube en adelante. Mantiene la misma base y los archivos subidos.
+No reinstales dependencias ni repitas las migraciones. Utiliza la compilación que ya preparaste con pnpm.cmd build.
+Este arranque no observa cambios de archivos ni reinicia el servidor automáticamente. Si modificas el código, detén, compila y vuelve a iniciarlo.
