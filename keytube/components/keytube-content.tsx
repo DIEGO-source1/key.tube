@@ -13,6 +13,10 @@ import {
   Volume2,
   VolumeX,
   Maximize2,
+  Heart,
+  MessageCircle,
+  Share2,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PublicPost, FullContent } from "@/lib/keytube-types";
@@ -194,16 +198,28 @@ function FeedMedia({ post, onOpen }: { post: PublicPost; onOpen: () => void }) {
 export function ContentCard({
   post,
   saved,
+  liked,
+  following,
   index,
   onOpen,
   onSave,
+  onLike,
+  onFollow,
+  onShare,
+  onComments,
   onCreator,
 }: {
   post: PublicPost;
   saved: boolean;
+  liked: boolean;
+  following: boolean;
   index?: number;
   onOpen: () => void;
   onSave: () => void;
+  onLike: () => void;
+  onFollow: () => void;
+  onShare: () => void;
+  onComments: () => void;
   onCreator: () => void;
 }) {
   const published = new Date(post.created_at).toLocaleDateString("es-BO", {
@@ -223,6 +239,9 @@ export function ContentCard({
           </span>
         </button>
         <div className="kt-feed-head-actions">
+          <button className={`kt-follow-button ${following ? "following" : ""}`} onClick={onFollow}>
+            <UserPlus size={14}/>{following ? "Siguiendo" : "Seguir"}
+          </button>
           <span className="kt-feed-index" title={`Publicación ${indexLabel}`}>#{indexLabel}</span>
           <button
             className={`kt-feed-save ${saved ? "selected" : ""}`}
@@ -247,12 +266,23 @@ export function ContentCard({
 
       <FeedMedia post={post} onOpen={onOpen} />
 
-      <footer className="kt-feed-card-footer">
+      <footer className="kt-feed-card-footer kt-social-footer">
+        <button className={`kt-social-action ${liked ? "selected" : ""}`} onClick={onLike} aria-pressed={liked}>
+          <Heart size={18} fill={liked ? "currentColor" : "none"}/><span>{post.likes || 0}</span>
+        </button>
+        <button className="kt-social-action" onClick={onComments}>
+          <MessageCircle size={18}/><span>{post.comment_count || 0}</span>
+        </button>
+        <button className="kt-social-action" onClick={onShare}>
+          <Share2 size={18}/><span>Compartir</span>
+        </button>
+        <button className={`kt-social-action ${saved ? "selected" : ""}`} onClick={onSave}>
+          <Bookmark size={18} fill={saved ? "currentColor" : "none"}/><span>Guardar</span>
+        </button>
         <span className="kt-card-views"><Eye size={14} /> {post.views || 0} vistas</span>
-        <span className="kt-card-category">{post.category || "General"}</span>
         <span className="kt-access-badge">
           <LockKeyhole size={13} />
-          {post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros · adelanto gratis"}
+          {post.visibility === "free" ? "Gratis" : "Miembros"}
         </span>
       </footer>
     </article>

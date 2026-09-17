@@ -139,6 +139,15 @@ CREATE TABLE IF NOT EXISTS saved_posts (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS saved_posts_owner_post_idx ON saved_posts(owner_id, post_id);
 
+CREATE TABLE IF NOT EXISTS post_likes (
+  id text PRIMARY KEY,
+  owner_id text NOT NULL,
+  post_id text NOT NULL,
+  created_at bigint NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS post_likes_owner_post_idx ON post_likes(owner_id, post_id);
+CREATE INDEX IF NOT EXISTS post_likes_post_idx ON post_likes(post_id);
+
 CREATE TABLE IF NOT EXISTS follows (
   id text PRIMARY KEY,
   owner_id text NOT NULL,

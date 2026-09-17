@@ -10,6 +10,8 @@ export type PublicPost = {
   network: number;
   created_at: number;
   views?: number;
+  likes?: number;
+  comment_count?: number;
   visibility?: "free" | "members";
   plan_id?: string | null;
   premium_lock?: string | null;

@@ -53,12 +53,12 @@ export async function GET(req: Request) {
 
     const sort = sortSchema.parse(query.get("sort") || "newest");
     const fields =
-      "id, owner_id, wallet, creator, title, intro, lock, network, created_at, views, type, category, thumbnail_id, preview_id, asset_id, visibility, plan_id, premium_lock";
+      "posts.id, posts.owner_id, posts.wallet, COALESCE((SELECT name FROM profiles WHERE owner_id=posts.owner_id), posts.creator) AS creator, (SELECT avatar FROM profiles WHERE owner_id=posts.owner_id) AS avatar, posts.title, posts.intro, posts.lock, posts.network, posts.created_at, posts.views, posts.type, posts.category, posts.thumbnail_id, posts.preview_id, posts.asset_id, posts.visibility, posts.plan_id, posts.premium_lock, (SELECT COUNT(*) FROM post_likes WHERE post_id=posts.id) AS likes, (SELECT COUNT(*) FROM comments WHERE post_id=posts.id) AS comment_count";
     const order = sortSql[sort];
     const querySQL = mine
       ? db()
           .prepare(
-            `SELECT ${fields} FROM posts WHERE owner_id=? ORDER BY ${order} LIMIT 100`,
+            `SELECT ${fields} FROM posts WHERE posts.owner_id=? ORDER BY ${order} LIMIT 100`,
           )
           .bind(user!.userId)
       : db().prepare(`SELECT ${fields} FROM posts ORDER BY ${order} LIMIT 100`);

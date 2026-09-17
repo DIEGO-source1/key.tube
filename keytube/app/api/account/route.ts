@@ -27,9 +27,10 @@ export async function GET() {
         profile: null,
         saved: [],
         following: [],
+        liked: [],
         postCount: 0,
       });
-    const [profile, saved, following, count] = await Promise.all([
+    const [profile, saved, following, liked, count] = await Promise.all([
       db()
         .prepare("SELECT name,bio,avatar,wallet FROM profiles WHERE owner_id = ?")
         .bind(user.userId)
@@ -47,6 +48,12 @@ export async function GET() {
         .bind(user.userId)
         .all<{ creator_id: string }>(),
       db()
+        .prepare(
+          "SELECT post_id FROM post_likes WHERE owner_id = ? ORDER BY created_at DESC",
+        )
+        .bind(user.userId)
+        .all<{ post_id: string }>(),
+      db()
         .prepare("SELECT COUNT(*) AS n FROM posts WHERE owner_id = ?")
         .bind(user.userId)
         .first<{ n: number }>(),
@@ -60,6 +67,7 @@ export async function GET() {
       },
       saved: saved.results.map((x) => x.post_id),
       following: following.results.map((x) => x.creator_id),
+      liked: liked.results.map((x) => x.post_id),
       postCount: count?.n || 0,
     });
   } catch (e) {

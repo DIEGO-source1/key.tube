@@ -135,6 +135,7 @@ export type StoredPost = {
   owner_id: string;
   wallet: Address;
   creator: string;
+  avatar?: string;
   title: string;
   intro: string;
   body: string;
@@ -145,6 +146,8 @@ export type StoredPost = {
   plan_id?: string | null;
   premium_lock?: string | null;
   views?: number;
+  likes?: number;
+  comment_count?: number;
   type?: import("./keytube-types").ContentType;
   category?: string;
   thumbnail_id?: string | null;
@@ -153,7 +156,7 @@ export type StoredPost = {
 };
 export async function getPost(id: string) {
   const p = await db()
-    .prepare("SELECT * FROM posts WHERE id = ?")
+    .prepare("SELECT posts.*, COALESCE((SELECT name FROM profiles WHERE owner_id=posts.owner_id), posts.creator) AS creator, (SELECT avatar FROM profiles WHERE owner_id=posts.owner_id) AS avatar, (SELECT COUNT(*) FROM post_likes WHERE post_id=posts.id) AS likes, (SELECT COUNT(*) FROM comments WHERE post_id=posts.id) AS comment_count FROM posts WHERE id = ?")
     .bind(id)
     .first<StoredPost>();
   if (!p) throw new AppError(404, "Esta publicación no existe.");
@@ -163,6 +166,7 @@ export function publicPost(p: StoredPost) {
   return {
     id: p.id,
     creator: p.creator,
+    avatar: p.avatar || undefined,
     creator_id: p.owner_id || p.wallet,
     visibility: p.visibility || "members",
     plan_id: p.plan_id || null,
@@ -173,6 +177,8 @@ export function publicPost(p: StoredPost) {
     network: p.network,
     created_at: p.created_at,
     views: p.views || 0,
+    likes: p.likes || 0,
+    comment_count: p.comment_count || 0,
     type: p.type || "text",
     category: p.category || "Educación",
     thumbnail_url: p.thumbnail_id ? `/api/media/${p.thumbnail_id}` : undefined,
