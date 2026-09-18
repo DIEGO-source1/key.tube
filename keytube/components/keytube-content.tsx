@@ -119,6 +119,35 @@ export function ContentCard({
       if (!next) void video.play().catch(() => {});
     }
   }
+  useEffect(() => {
+    const video = feedVideoRef.current;
+    if (!video || !freeVideoUrl) return;
+
+    let mostlyVisible = false;
+    const syncPlayback = () => {
+      if (document.hidden || !mostlyVisible) {
+        if (!video.paused) video.pause();
+        return;
+      }
+      if (video.paused) void video.play().catch(() => {});
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        mostlyVisible = entry.isIntersecting && entry.intersectionRatio >= 0.55;
+        syncPlayback();
+      },
+      { threshold: [0, 0.25, 0.55, 0.75, 1] },
+    );
+
+    observer.observe(video);
+    document.addEventListener("visibilitychange", syncPlayback);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", syncPlayback);
+      video.pause();
+    };
+  }, [freeVideoUrl]);
   return (
     <article className="kt-content-card kt-feed-card">
       <header className="kt-feed-card-head">
@@ -159,7 +188,6 @@ export function ContentCard({
               ref={feedVideoRef}
               src={freeVideoUrl}
               poster={post.thumbnail_url}
-              autoPlay
               muted={feedMuted}
               loop
               playsInline
@@ -232,6 +260,35 @@ export function ContentMedia({
   const [previewBlocked,setPreviewBlocked]=useState(false);
   const [videoMuted,setVideoMuted]=useState(true);
   useEffect(()=>{setPreviewBlocked(false);setVideoMuted(true);},[full?.mediaUrl,post.id]);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (type !== "video" || post.visibility !== "free" || !url || !video || previewBlocked) return;
+
+    let mostlyVisible = false;
+    const syncPlayback = () => {
+      if (document.hidden || !mostlyVisible) {
+        if (!video.paused) video.pause();
+        return;
+      }
+      if (video.paused) void video.play().catch(() => {});
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        mostlyVisible = entry.isIntersecting && entry.intersectionRatio >= 0.55;
+        syncPlayback();
+      },
+      { threshold: [0, 0.25, 0.55, 0.75, 1] },
+    );
+
+    observer.observe(video);
+    document.addEventListener("visibilitychange", syncPlayback);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", syncPlayback);
+      video.pause();
+    };
+  }, [type, post.visibility, url, previewBlocked]);
   useEffect(()=>{
     if(type!=="audio"||post.visibility!=="free"||!url)return;
     const audio=audioRef.current;if(!audio)return;
@@ -265,7 +322,6 @@ export function ContentMedia({
             ref={videoRef}
             key={url}
             controls={!previewBlocked}
-            autoPlay={post.visibility === "free"}
             muted={videoMuted}
             playsInline
             preload={post.visibility === "free" ? "auto" : "metadata"}
