@@ -19,6 +19,9 @@ export type PublicPost = {
   preview_url?: string;
   avatar?: string;
   duration?: string;
+  likes?: number;
+  comment_count?: number;
+  liked?: boolean;
 };
 
 export type Draft = {

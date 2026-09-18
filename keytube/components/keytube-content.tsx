@@ -64,13 +64,27 @@ export function ContentCard({
   onOpen,
   onSave,
   onCreator,
+  liked,
+  following,
+  canFollow,
+  onLike,
+  onFollow,
+  onShare,
+  onComments,
 }: {
   post: PublicPost;
   saved: boolean;
   index?: number;
+  liked?: boolean;
+  following?: boolean;
+  canFollow?: boolean;
   onOpen: () => void;
   onSave: () => void;
   onCreator: () => void;
+  onLike?: () => void;
+  onFollow?: () => void;
+  onShare?: () => void;
+  onComments?: () => void;
 }) {
   const Icon =
     post.type === "audio"

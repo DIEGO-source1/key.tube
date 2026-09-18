@@ -40,14 +40,13 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-"exclude": [
-  "node_modules",
-  "examples",
-  "respaldo",
-  "actualizar-keytube",
-  "actualizar-keytube-sepolia",
-  "actualizar-keytube-video",
-  "KeyTube-arranque-estable",
-  "KeyTube-arranque-v2"
-]
+  "exclude": [
+    "node_modules",
+    "examples",
+    "actualizar-keytube",
+    "actualizar-keytube-sepolia",
+    "actualizar-keytube-video",
+    "KeyTube-arranque-estable",
+    "KeyTube-arranque-v2"
+  ]
 }

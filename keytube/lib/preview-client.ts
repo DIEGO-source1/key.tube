@@ -77,3 +77,11 @@ export async function videoPreview(file:File,onProgress:(seconds:number)=>void) 
     video.pause();video.remove();video.removeAttribute('src');video.load();URL.revokeObjectURL(url);
   }
 }
+
+
+// Compatibilidad con versiones anteriores
+export const optimizeImage = imagePreview;
+export const videoCover = async (file: File) => {
+  const result = await videoPreview(file, ()=>{});
+  return result.cover;
+};
