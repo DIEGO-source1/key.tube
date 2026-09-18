@@ -10,6 +10,8 @@ import {
   Download,
   ArrowUpRight,
   Eye,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PublicPost, FullContent } from "@/lib/keytube-types";
@@ -106,6 +108,17 @@ export function ContentCard({
     : post.thumbnail_url;
   const freeVideoUrl = post.type === "video" && post.visibility === "free" ? post.preview_url : undefined;
   const indexLabel = String(index || 1).padStart(2, "0");
+  const feedVideoRef = useRef<HTMLVideoElement>(null);
+  const [feedMuted, setFeedMuted] = useState(true);
+  function toggleFeedSound() {
+    const next = !feedMuted;
+    setFeedMuted(next);
+    const video = feedVideoRef.current;
+    if (video) {
+      video.muted = next;
+      if (!next) void video.play().catch(() => {});
+    }
+  }
   return (
     <article className="kt-content-card kt-feed-card">
       <header className="kt-feed-card-head">
@@ -143,18 +156,25 @@ export function ContentCard({
         {freeVideoUrl ? (
           <div className="kt-open-thumbnail kt-free-video-card">
             <video
+              ref={feedVideoRef}
               src={freeVideoUrl}
               poster={post.thumbnail_url}
               autoPlay
-              muted
+              muted={feedMuted}
               loop
               playsInline
+              controls
               preload="metadata"
               aria-label={`Video gratuito: ${post.title}`}
-              onClick={onOpen}
             />
-            <button className="kt-free-video-open" type="button" onClick={onOpen} aria-label={`Abrir ${post.title}`}>
-              <span>Gratis · reproducción automática</span>
+            <button
+              className="kt-video-sound-toggle kt-feed-sound-toggle"
+              type="button"
+              onClick={toggleFeedSound}
+              aria-label={feedMuted ? "Activar sonido" : "Silenciar video"}
+              title={feedMuted ? "Activar sonido" : "Silenciar video"}
+            >
+              {feedMuted ? <VolumeX size={18}/> : <Volume2 size={18}/>}
             </button>
           </div>
         ) : (
@@ -187,7 +207,7 @@ export function ContentCard({
         <span className="kt-card-category">{post.category || "General"}</span>
         <span className="kt-access-badge">
           <LockKeyhole size={13} />
-          {post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros · adelanto gratis"}
+          {post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros"}
         </span>
       </footer>
     </article>
@@ -210,7 +230,8 @@ export function ContentMedia({
   const audioRef = useRef<HTMLAudioElement>(null);
   const pixelRef = useRef<HTMLCanvasElement>(null);
   const [previewBlocked,setPreviewBlocked]=useState(false);
-  useEffect(()=>{setPreviewBlocked(false);},[full?.mediaUrl,post.id]);
+  const [videoMuted,setVideoMuted]=useState(true);
+  useEffect(()=>{setPreviewBlocked(false);setVideoMuted(true);},[full?.mediaUrl,post.id]);
   useEffect(()=>{
     if(type!=="audio"||post.visibility!=="free"||!url)return;
     const audio=audioRef.current;if(!audio)return;
@@ -245,7 +266,7 @@ export function ContentMedia({
             key={url}
             controls={!previewBlocked}
             autoPlay={post.visibility === "free"}
-            muted={post.visibility === "free"}
+            muted={videoMuted}
             playsInline
             preload={post.visibility === "free" ? "auto" : "metadata"}
             poster={post.thumbnail_url}
@@ -254,8 +275,20 @@ export function ContentMedia({
             onTimeUpdate={e => {if (!full && post.visibility !== "free" && e.currentTarget.currentTime >= 9.8) pixelateAndLock(e.currentTarget);}}
             onEnded={e => {if (!full && post.visibility !== "free") pixelateAndLock(e.currentTarget);}}
           />
+          {!previewBlocked&&<button
+            className="kt-video-sound-toggle"
+            type="button"
+            onClick={()=>{
+              const next=!videoMuted;
+              setVideoMuted(next);
+              const video=videoRef.current;
+              if(video){video.muted=next;if(!next)void video.play().catch(()=>{});}
+            }}
+            aria-label={videoMuted?"Activar sonido":"Silenciar video"}
+            title={videoMuted?"Activar sonido":"Silenciar video"}
+          >{videoMuted?<VolumeX size={19}/>:<Volume2 size={19}/>}</button>}
           <canvas ref={pixelRef} className="kt-pixelated-preview" aria-hidden="true"/>
-          {previewBlocked&&<div className="kt-pixel-lock"><LockKeyhole size={34}/><strong>Adelanto terminado</strong><span>Desbloquea el contenido para seguir viendo.</span></div>}
+          {previewBlocked&&<div className="kt-pixel-lock"><LockKeyhole size={34}/><strong>Contenido exclusivo</strong><span>Desbloquea para seguir viendo.</span></div>}
           </>
         ) : (
           <div
@@ -267,12 +300,9 @@ export function ContentMedia({
             }}
           >
             <Play size={42} />
-            <span>El creador compartirá un adelanto aquí.</span>
+            <span>El creador compartirá el contenido aquí.</span>
           </div>
         )}
-        <span className="kt-player-label">
-          {post.visibility === "free" ? "Gratis · video completo · reproducción automática" : full ? "Contenido completo" : previewBlocked ? "Vista bloqueada · requiere membresía" : "Adelanto gratuito · 10 segundos"}
-        </span>
       </div>
     );
   if (type === "audio")
@@ -284,7 +314,7 @@ export function ContentMedia({
         <div>
           <Headphones size={30} />
           <h2>{post.title}</h2>
-          <p>{post.visibility === "free" ? "Canción completa · reproducción automática" : full ? "Sesión completa" : "Escucha el adelanto"}</p>
+          <p>{post.visibility === "free" ? "Canción completa" : full ? "Sesión completa" : "Contenido exclusivo"}</p>
           {url ? (
             <audio
               ref={audioRef}
@@ -316,10 +346,7 @@ export function ContentMedia({
         ) : (
           <ImageIcon size={60} />
         )}
-        {lockedPreview&&<div className="kt-photo-lock"><LockKeyhole size={30}/><strong>Vista pixelada</strong><span>Desbloquea para ver la imagen original.</span></div>}
-        <span className="kt-player-label">
-          {full ? "Imagen original desbloqueada" : lockedPreview ? "Vista pixelada · requiere membresía" : "Imagen completa"}
-        </span>
+        {lockedPreview&&<div className="kt-photo-lock"><LockKeyhole size={30}/><strong>Contenido exclusivo</strong><span>Desbloquea para ver la imagen original.</span></div>}
       </div>
     );
   }
@@ -334,12 +361,12 @@ export function ContentMedia({
           {full
             ? "Documento completo desbloqueado."
             : lockedPreview
-              ? "Estás viendo únicamente las páginas gratuitas que eligió el creador."
+              ? "Páginas gratuitas disponibles. El resto requiere membresía."
               : "Documento completo disponible."}
         </p>
         {url&&<div className="kt-document-frame"><iframe src={frameUrl} title={`Vista de ${post.title}`} onError={onError}/></div>}
-        {lockedPreview&&<div className="kt-document-lock-note"><LockKeyhole size={20}/><span><strong>Fin del adelanto.</strong> Desbloquea la membresía para abrir todas las páginas.</span></div>}
-        {url&&<Button asChild className="kt-button"><a href={url} target="_blank" rel="noreferrer"><Download size={16}/>{full?"Abrir documento completo":"Abrir adelanto en otra pestaña"}<ArrowUpRight size={15}/></a></Button>}
+        {lockedPreview&&<div className="kt-document-lock-note"><LockKeyhole size={20}/><span><strong>Contenido exclusivo.</strong> Desbloquea la membresía para abrir todas las páginas.</span></div>}
+        {url&&<Button asChild className="kt-button"><a href={url} target="_blank" rel="noreferrer"><Download size={16}/>{full?"Abrir documento completo":"Abrir páginas gratuitas"}<ArrowUpRight size={15}/></a></Button>}
       </div>
     );
   }
