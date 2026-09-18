@@ -99,9 +99,12 @@ export function ContentCard({
     month: "short",
     year: "numeric",
   });
-  const cardThumbnail = post.type === "image" && post.visibility !== "free"
-    ? (post.preview_url || post.thumbnail_url)
+  const cardThumbnail = post.type === "image"
+    ? post.visibility === "free"
+      ? (post.preview_url || post.thumbnail_url)
+      : (post.preview_url || post.thumbnail_url)
     : post.thumbnail_url;
+  const freeVideoUrl = post.type === "video" && post.visibility === "free" ? post.preview_url : undefined;
   const indexLabel = String(index || 1).padStart(2, "0");
   return (
     <article className="kt-content-card kt-feed-card">
@@ -137,27 +140,46 @@ export function ContentCard({
       </div>
 
       <div className="kt-thumb">
-        <button
-          className="kt-open-thumbnail"
-          onClick={onOpen}
-          aria-label={`Abrir ${post.title}`}
-        >
-          {cardThumbnail ? (
-            <img className={post.type === "image" && post.visibility !== "free" ? "kt-card-paid-image" : undefined} src={cardThumbnail} alt="" loading="lazy" />
-          ) : (
-            <span className={`kt-generated-cover ${post.type || "text"}`}>
-              <Icon size={54} />
-              <span>{post.category}</span>
-            </span>
-          )}
-          <span className="kt-thumb-play">
-            <Icon
-              size={26}
-              fill={post.type === "video" ? "currentColor" : "none"}
+        {freeVideoUrl ? (
+          <div className="kt-open-thumbnail kt-free-video-card">
+            <video
+              src={freeVideoUrl}
+              poster={post.thumbnail_url}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label={`Video gratuito: ${post.title}`}
+              onClick={onOpen}
             />
-          </span>
-          {post.duration && <span className="kt-duration">{post.duration}</span>}
-        </button>
+            <button className="kt-free-video-open" type="button" onClick={onOpen} aria-label={`Abrir ${post.title}`}>
+              <span>Gratis · reproducción automática</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            className="kt-open-thumbnail"
+            onClick={onOpen}
+            aria-label={`Abrir ${post.title}`}
+          >
+            {cardThumbnail ? (
+              <img className={post.type === "image" && post.visibility !== "free" ? "kt-card-paid-image" : undefined} src={cardThumbnail} alt="" loading="lazy" />
+            ) : (
+              <span className={`kt-generated-cover ${post.type || "text"}`}>
+                <Icon size={54} />
+                <span>{post.category}</span>
+              </span>
+            )}
+            <span className="kt-thumb-play">
+              <Icon
+                size={26}
+                fill={post.type === "video" ? "currentColor" : "none"}
+              />
+            </span>
+            {post.duration && <span className="kt-duration">{post.duration}</span>}
+          </button>
+        )}
       </div>
 
       <footer className="kt-feed-card-footer">
@@ -185,9 +207,21 @@ export function ContentMedia({
   const url = full?.mediaUrl || post.preview_url;
   const type = post.type || "text";
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const pixelRef = useRef<HTMLCanvasElement>(null);
   const [previewBlocked,setPreviewBlocked]=useState(false);
   useEffect(()=>{setPreviewBlocked(false);},[full?.mediaUrl,post.id]);
+  useEffect(()=>{
+    if(type!=="audio"||post.visibility!=="free"||!url)return;
+    const audio=audioRef.current;if(!audio)return;
+    const tryPlay=()=>{void audio.play().catch(()=>{});};
+    tryPlay();
+    // Chrome/Safari pueden bloquear audio audible hasta la primera interacción.
+    // En ese caso arrancamos automáticamente en cuanto el usuario toca/clica la página.
+    window.addEventListener("pointerdown",tryPlay,{once:true});
+    window.addEventListener("keydown",tryPlay,{once:true});
+    return()=>{window.removeEventListener("pointerdown",tryPlay);window.removeEventListener("keydown",tryPlay);};
+  },[type,post.visibility,url]);
   function pixelateAndLock(video:HTMLVideoElement){
     if(full||post.visibility==='free'||previewBlocked)return;
     video.pause();
@@ -210,8 +244,10 @@ export function ContentMedia({
             ref={videoRef}
             key={url}
             controls={!previewBlocked}
+            autoPlay={post.visibility === "free"}
+            muted={post.visibility === "free"}
             playsInline
-            preload="metadata"
+            preload={post.visibility === "free" ? "auto" : "metadata"}
             poster={post.thumbnail_url}
             src={url}
             onError={onError}
@@ -235,7 +271,7 @@ export function ContentMedia({
           </div>
         )}
         <span className="kt-player-label">
-          {full ? "Contenido completo" : previewBlocked ? "Vista bloqueada · requiere membresía" : "Adelanto gratuito · 10 segundos"}
+          {post.visibility === "free" ? "Gratis · video completo · reproducción automática" : full ? "Contenido completo" : previewBlocked ? "Vista bloqueada · requiere membresía" : "Adelanto gratuito · 10 segundos"}
         </span>
       </div>
     );
@@ -248,12 +284,14 @@ export function ContentMedia({
         <div>
           <Headphones size={30} />
           <h2>{post.title}</h2>
-          <p>{full ? "Sesión completa" : "Escucha el adelanto"}</p>
+          <p>{post.visibility === "free" ? "Canción completa · reproducción automática" : full ? "Sesión completa" : "Escucha el adelanto"}</p>
           {url ? (
             <audio
+              ref={audioRef}
               key={url}
               controls
-              preload="metadata"
+              autoPlay={post.visibility === "free"}
+              preload={post.visibility === "free" ? "auto" : "metadata"}
               src={url}
               onError={onError}
               onTimeUpdate={e => {if (!full && post.visibility !== "free" && e.currentTarget.currentTime >= 10) {e.currentTarget.pause();onPreviewEnd?.();}}}

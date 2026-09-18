@@ -2310,3 +2310,9 @@ button {
 @media(max-width:740px){.kt-document-frame{height:62vh;min-height:360px}.kt-document-view{padding:22px}}
 
 .kt-card-paid-image{image-rendering:pixelated}
+
+/* KeyTube V7: el contenido gratuito se muestra/reproduce directamente. */
+.kt-free-video-card{position:relative;width:100%;height:100%;overflow:hidden;background:#050916}
+.kt-free-video-card>video{display:block;width:100%;height:100%;object-fit:cover;background:#050916;cursor:pointer}
+.kt-free-video-open{position:absolute;left:10px;bottom:10px;border:1px solid rgba(255,255,255,.22);background:rgba(5,9,22,.74);backdrop-filter:blur(8px);color:#fff;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:700;cursor:pointer}
+.kt-free-video-open:hover{background:rgba(71,50,143,.88)}

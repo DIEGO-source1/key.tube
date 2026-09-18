@@ -1,11 +1,10 @@
-# KeyTube V17 · Feed multimedia automático
+# KeyTube V17 / paquete V7 — contenido gratuito automático
 
-- Los videos del feed se reproducen automáticamente, en silencio y dentro de la publicación cuando entran en pantalla.
-- Al seguir desplazándose, el video sale de pantalla y se pausa automáticamente.
-- Solo un video del feed queda reproduciéndose a la vez.
-- El usuario puede activar/desactivar el sonido y abrir la publicación completa.
-- Las imágenes se muestran directamente en el feed, sin depender de una portada manual.
-- Los audios muestran un reproductor dentro de la publicación.
-- El contenido gratuito usa el archivo completo en el feed; el contenido de membresía usa solamente el adelanto público.
-- Se eliminó el selector manual “Portada pública”. KeyTube genera automáticamente una imagen de referencia desde el video o la propia imagen cuando es necesario.
-- Se conservan los cambios de V16: móvil, archivos de hasta 500 MB, Vercel Blob y wallet opcional para uso normal.
+Cambios principales:
+
+- Las imágenes gratuitas muestran el archivo original en lugar de la vista pixelada.
+- Los videos gratuitos usan el archivo completo y arrancan automáticamente en silencio (política de navegadores); el usuario puede activar el sonido con los controles.
+- Al abrir una canción gratuita, KeyTube intenta reproducir el audio completo automáticamente. Si el navegador bloquea audio con sonido, arranca con la primera interacción del usuario.
+- Los documentos gratuitos abren el documento completo dentro del visor.
+- Las publicaciones de pago conservan sus protecciones: imagen pixelada, video/audio de 10 segundos y documento limitado a las páginas elegidas.
+- El endpoint público solo expone el archivo completo cuando la publicación está marcada como `free`.

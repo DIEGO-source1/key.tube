@@ -182,7 +182,14 @@ export function publicPost(p: StoredPost) {
     type: p.type || "text",
     category: p.category || "Educación",
     thumbnail_url: p.thumbnail_id ? `/api/media/${p.thumbnail_id}` : undefined,
-    preview_url: p.preview_id ? `/api/media/${p.preview_id}` : undefined,
+    // El contenido gratuito puede usar el archivo completo como media pública.
+    // Para publicaciones de pago seguimos exponiendo únicamente el preview separado.
+    preview_url:
+      p.visibility === "free" && p.asset_id
+        ? `/api/media/${p.asset_id}?public=${p.id}`
+        : p.preview_id
+          ? `/api/media/${p.preview_id}`
+          : undefined,
   };
 }
 export async function consumeProof(
