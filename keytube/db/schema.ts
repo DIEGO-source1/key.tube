@@ -171,6 +171,22 @@ export const oauthStates = pgTable("oauth_states", {
   expiresAt: epochMs("expires_at").notNull(),
 });
 
+export const passwordRecoveryCodes = pgTable(
+  "password_recovery_codes",
+  {
+    flowHash: text("flow_hash").primaryKey(),
+    userId: text("user_id").notNull(),
+    codeHash: text("code_hash").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: epochMs("created_at").notNull(),
+    expiresAt: epochMs("expires_at").notNull(),
+  },
+  (t) => [
+    index("password_recovery_user_idx").on(t.userId),
+    index("password_recovery_expiry_idx").on(t.expiresAt),
+  ],
+);
+
 export const creatorPlans = pgTable(
   "creator_plans",
   {

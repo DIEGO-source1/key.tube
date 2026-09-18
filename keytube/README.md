@@ -27,7 +27,8 @@ Pulsa **Crear cuenta**, escribe nombre, correo y una contraseña de al menos 10 
 ## Lo que incluye
 
 - Registro, inicio y cierre de sesión, con cuentas independientes.
-- Acceso opcional con Google y vinculación desde una cuenta existente.
+- Acceso con Google y vinculación automática segura cuando Google verifica el mismo correo de una cuenta existente.
+- Recuperación de cuenta por correo con código de 6 dígitos, expiración e intentos limitados.
 - Perfil editable, favoritos, seguimiento de creadores y comentarios.
 - Estudio para publicar video, música, imágenes, PDF/TXT y artículos.
 - Elección de acceso **Gratis**, **Básico** o **Premium** por publicación.
@@ -88,9 +89,22 @@ GOOGLE_CLIENT_SECRET=tu-secreto
 5. Reinicia el servidor y pulsa **Continuar con Google**.
 6. En alojamiento, configura esas tres variables en el servidor. Usa el dominio HTTPS real como `APP_ORIGIN` y autoriza ese dominio más `/api/auth/google/callback` en Google. El secreto es privado; no uses prefijos `VITE_` o `NEXT_PUBLIC_`.
 
-Si el correo ya tiene una cuenta con contraseña, entra primero y usa **Mi cuenta → Vincular mi cuenta con Google**, eligiendo el mismo correo. No se fusionan cuentas automáticamente por coincidencia de dirección.
+Si Google confirma criptográficamente que el correo está verificado y coincide con una cuenta existente, KeyTube vincula ese acceso a la misma cuenta para evitar duplicados. También puedes vincular Google manualmente desde **Mi cuenta**.
 
 Google se verifica con RS256, claves públicas oficiales, emisor, audiencia, caducidad, correo verificado y nonce. El flujo usa PKCE, estado de un solo uso y cookie HttpOnly. [Documentación de Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).
+
+## Activar recuperación por correo
+
+La pantalla **¿Olvidaste tu contraseña?** envía un código de 6 dígitos al correo de la cuenta. El código dura 10 minutos, admite hasta 5 intentos y se invalida después de usarlo. Al cambiar la contraseña se cierran las sesiones anteriores y se abre una nueva sesión segura. También funciona para cuentas que originalmente se crearon con Google: el correo verificado permite establecer una contraseña sin quitar el acceso de Google.
+
+KeyTube usa la API HTTPS de **Resend** para enviar el código, sin guardar el código en texto plano. Configura en `.env` y en Vercel:
+
+```dotenv
+RESEND_API_KEY=re_xxxxxxxxx
+EMAIL_FROM=KeyTube <no-reply@tu-dominio.com>
+```
+
+En producción usa un dominio/remitente verificado en Resend. La tabla `password_recovery_codes` se crea por migración y el servidor también comprueba que exista antes de utilizarla. Para una base Neon existente puedes ejecutar `neon/004_password_recovery.sql`.
 
 ## Demostración real
 
@@ -105,7 +119,7 @@ El retorno del checkout, una sesión de usuario o localStorage nunca conceden ac
 
 ## Base de datos y actualización
 
-`database/keytube.sqlite` y `database/keytube.sql` contienen **13 tablas vacías**, con sus índices. Puedes inspeccionarlas con un visor SQLite. La aplicación local utiliza el emulador D1 de `.wrangler/state/`, preparado por `db:setup`, y no abre directamente la base de distribución.
+`database/keytube.sqlite` y `database/keytube.sql` contienen el esquema vacío de KeyTube, incluida la tabla temporal de recuperación de cuenta, con sus índices. Puedes inspeccionarlas con un visor SQLite. La aplicación local utiliza el emulador D1 de `.wrangler/state/`, preparado por `db:setup`, y no abre directamente la base de distribución.
 
 | Tabla | Datos |
 | --- | --- |
@@ -113,6 +127,7 @@ El retorno del checkout, una sesión de usuario o localStorage nunca conceden ac
 | sessions | Hash del identificador de sesión y caducidad. |
 | oauth_states | Estado, nonce, PKCE y cuenta a vincular. |
 | auth_limits | Límites temporales de intentos. |
+| password_recovery_codes | Códigos de recuperación almacenados como hash, intentos y caducidad. |
 | creator_plans | Dos planes por creador, beneficios, formatos, Lock y red. |
 | posts | Introducción pública, texto completo, nivel y archivos. |
 | assets | Propietario, formato y referencia privada a R2. |
@@ -152,7 +167,7 @@ El catálogo no devuelve cuerpo privado, correo ni referencia del archivo origin
 
 Las escrituras validan origen, formato y propietario. Los accesos tienen límites temporales. Las contraseñas usan scrypt `N=16384, r=8, p=5` con derivaciones serializadas por instancia para limitar memoria; es un [perfil documentado por OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
 
-Esta versión no incluye recuperación de contraseña, verificación por correo del registro, moderación ni facturación fiscal. Google exige correo verificado. Un miembro autorizado puede guardar o capturar el contenido que recibió; el control de entrega no es DRM.
+Esta versión incluye recuperación de contraseña por correo. Todavía no incluye verificación por correo durante el registro, moderación ni facturación fiscal. Google exige correo verificado. Un miembro autorizado puede guardar o capturar el contenido que recibió; el control de entrega no es DRM.
 
 ## Código y pruebas
 

@@ -13,8 +13,8 @@ const payloadSchema = z.object({
 });
 
 const allowed = new Set([
-  "video/mp4", "video/webm", "video/quicktime", "video/x-m4v",
-  "audio/mpeg", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm", "audio/mp4", "audio/aac",
+  "video/mp4", "video/webm",
+  "audio/mpeg", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm",
   "image/jpeg", "image/png", "image/webp",
   "application/pdf", "text/plain",
 ]);

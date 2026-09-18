@@ -13,6 +13,25 @@ export async function digest(value: string) {
 export function authDB() {
   return getDatabase();
 }
+let recoverySchemaPromise: Promise<void> | null = null;
+export async function ensurePasswordRecoverySchema() {
+  if (!recoverySchemaPromise) {
+    recoverySchemaPromise = (async () => {
+      await authDB().prepare(`CREATE TABLE IF NOT EXISTS password_recovery_codes (
+        flow_hash text PRIMARY KEY,
+        user_id text NOT NULL,
+        code_hash text NOT NULL,
+        attempts integer NOT NULL DEFAULT 0,
+        created_at bigint NOT NULL,
+        expires_at bigint NOT NULL
+      )`).run();
+      await authDB().prepare('CREATE INDEX IF NOT EXISTS password_recovery_user_idx ON password_recovery_codes(user_id)').run();
+      await authDB().prepare('CREATE INDEX IF NOT EXISTS password_recovery_expiry_idx ON password_recovery_codes(expires_at)').run();
+    })();
+  }
+  try { await recoverySchemaPromise; }
+  catch (error) { recoverySchemaPromise = null; throw error; }
+}
 export function cookieValue(cookie: string | null, name: string) {
   return (cookie || '').split(';').map(x => x.trim()).find(x => x.startsWith(name + '='))?.slice(name.length + 1) || '';
 }

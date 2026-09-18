@@ -44,15 +44,22 @@ export async function GET(req:Request,{params}:{params:Promise<{step:string}>}) 
       if(!user)return errorRedirect('google_link_failed');
     }
     if(!user) {
-      // Never silently link a password account by an unverified email address.
-      const collision=await authDB().prepare('SELECT id FROM users WHERE email=?').bind(identity.email).first();
-      if(collision)return errorRedirect('use_password');
-      const id=crypto.randomUUID(),now=Date.now();
-      await authDB().batch([
-        authDB().prepare('INSERT INTO users (id,email,name,google_sub,created_at) VALUES (?,?,?,?,?)').bind(id,identity.email,identity.name,identity.sub,now),
-        authDB().prepare("INSERT INTO profiles (owner_id,name,bio,avatar,updated_at) VALUES (?,?,'','nico',?)").bind(id,identity.name,now),
-      ]);
-      user={id,email:identity.email,name:identity.name,google_sub:identity.sub,password_hash:null};
+      // googleIdentity only returns identities whose Google email is cryptographically verified.
+      // Reuse an existing KeyTube account with that same verified email instead of creating a duplicate.
+      const collision=await authDB().prepare('SELECT * FROM users WHERE email=?').bind(identity.email).first<UserRow>();
+      if(collision) {
+        if(collision.google_sub&&collision.google_sub!==identity.sub)return errorRedirect('google_link_failed');
+        if(!collision.google_sub)await authDB().prepare('UPDATE users SET google_sub=? WHERE id=? AND google_sub IS NULL').bind(identity.sub,collision.id).run();
+        user=await authDB().prepare('SELECT * FROM users WHERE id=? AND google_sub=?').bind(collision.id,identity.sub).first<UserRow>();
+        if(!user)return errorRedirect('google_link_failed');
+      } else {
+        const id=crypto.randomUUID(),now=Date.now();
+        await authDB().batch([
+          authDB().prepare('INSERT INTO users (id,email,name,google_sub,created_at) VALUES (?,?,?,?,?)').bind(id,identity.email,identity.name,identity.sub,now),
+          authDB().prepare("INSERT INTO profiles (owner_id,name,bio,avatar,updated_at) VALUES (?,?,'','nico',?)").bind(id,identity.name,now),
+        ]);
+        user={id,email:identity.email,name:identity.name,google_sub:identity.sub,password_hash:null};
+      }
     }
     const headers=new Headers({Location:origin+'/','Cache-Control':'no-store'});
     headers.append('Set-Cookie',await createSession(req,user.id));

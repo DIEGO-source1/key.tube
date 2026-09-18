@@ -1,0 +1,31 @@
+KEYTUBE - ACTUALIZACION PARA VINCULAR LOCKS EN SEPOLIA
+
+1. Deten KeyTube con Ctrl+C en la ventana de PowerShell que lo mantiene abierto.
+2. Extrae este ZIP dentro de tu carpeta keytube, junto a package.json.
+3. En PowerShell, desde esa carpeta, ejecuta:
+
+node .\actualizar-keytube-sepolia\instalar.mjs
+
+4. Si termina sin errores, ejecuta:
+
+pnpm.cmd build
+
+5. Si la compilacion termina sin errores, inicia KeyTube:
+
+pnpm.cmd dev
+
+   Deja esta ventana abierta mientras usas KeyTube.
+
+6. Abre http://127.0.0.1:5173/memberships y pulsa Ctrl+F5.
+   El formulario actualizado dice: Direccion o enlace del Lock.
+   La opcion de red es: Ethereum Sepolia - pruebas.
+7. Conserva los datos de tu Lock y vuelve a pulsar Vincular Lock.
+
+La actualizacion reemplaza nueve archivos y guarda un respaldo de los archivos
+anteriores y de la base D1 local. No cambia cuentas, archivos subidos,
+dependencias ni el script con el que inicias KeyTube. No necesita migraciones.
+
+Incluye reconocimiento de enlaces de Unlock, una conexion alternativa a Sepolia
+y errores mas especificos. La vinculacion real requiere la firma de tu wallet.
+Si falla, comparte el mensaje completo de la pagina y las ultimas lineas de
+PowerShell. No compartas contrasenas, claves privadas ni frases de recuperacion.

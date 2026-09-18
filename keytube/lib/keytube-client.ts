@@ -72,7 +72,7 @@ async function requireWalletProvider() {
   const provider = await discoverWalletProvider();
   if (!provider) {
     throw new Error(
-      "Esta acción Web3 necesita una wallet compatible. Puedes seguir usando KeyTube normalmente sin wallet; conéctala solo para administrar planes o verificar una membresía.",
+      "KeyTube no puede detectar MetaMask en esta pestaña. En Chrome abre Extensiones → MetaMask → Acceso al sitio y permite key-tube.vercel.app (o todos los sitios), recarga la página y vuelve a intentar.",
     );
   }
   return provider;

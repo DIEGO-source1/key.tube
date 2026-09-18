@@ -134,10 +134,7 @@ export function validFile(bytes: Uint8Array, mime: string) {
   if (mime === "image/webp")
     return head.startsWith("RIFF") && head.slice(8, 12) === "WEBP";
   if (mime === "application/pdf") return head.startsWith("%PDF-");
-  if (["video/mp4", "video/quicktime", "video/x-m4v", "audio/mp4"].includes(mime))
-    return head.slice(4, 8) === "ftyp";
-  if (mime === "audio/aac")
-    return (bytes[0] === 255 && (bytes[1] & 246) === 240);
+  if (mime === "video/mp4") return head.slice(4, 8) === "ftyp";
   if (mime === "video/webm" || mime === "audio/webm")
     return (
       bytes[0] === 26 && bytes[1] === 69 && bytes[2] === 223 && bytes[3] === 163

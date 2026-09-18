@@ -1,0 +1,31 @@
+KEYTUBE - CORRECCION DEL ADELANTO AUTOMATICO DE VIDEO
+
+Requiere la actualizacion KeyTube-vincular-Sepolia ya instalada.
+
+1. Deten KeyTube con Ctrl+C en PowerShell.
+2. Extrae este ZIP dentro de tu carpeta keytube instalada, junto a package.json.
+3. Desde esa carpeta, ejecuta:
+
+node .\actualizar-keytube-video\instalar.mjs
+
+4. Si termina sin errores, ejecuta:
+
+pnpm.cmd build
+
+5. Si la compilacion termina sin errores, inicia la aplicacion compilada:
+
+node --trace-exit --trace-uncaught .\scripts\start-local.mjs
+
+6. Deja PowerShell abierto. En el navegador, pulsa Ctrl+F5.
+7. Selecciona de nuevo tu video completo y tu plan en Acceso. Publica manteniendo
+   abierta la pestana mientras KeyTube prepara el adelanto.
+
+La muestra de video dura hasta 9 segundos. Se recorta y comprueba antes de subir
+el archivo completo. El servidor conserva su limite de 10 segundos.
+Se conserva el sonido presente en la grabacion generada por el navegador.
+
+El instalador guarda un respaldo de los archivos anteriores y de la base local.
+Esta actualizacion no cambia cuentas, planes, subidas, dependencias ni arranque.
+No requiere migraciones ni compras de criptomonedas.
+
+Si aparece otro error, conserva el mensaje completo de la pagina y PowerShell.

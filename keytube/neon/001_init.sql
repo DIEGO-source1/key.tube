@@ -33,6 +33,17 @@ CREATE TABLE IF NOT EXISTS oauth_states (
   expires_at bigint NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS password_recovery_codes (
+  flow_hash text PRIMARY KEY,
+  user_id text NOT NULL,
+  code_hash text NOT NULL,
+  attempts integer NOT NULL DEFAULT 0,
+  created_at bigint NOT NULL,
+  expires_at bigint NOT NULL
+);
+CREATE INDEX IF NOT EXISTS password_recovery_user_idx ON password_recovery_codes(user_id);
+CREATE INDEX IF NOT EXISTS password_recovery_expiry_idx ON password_recovery_codes(expires_at);
+
 CREATE TABLE IF NOT EXISTS profiles (
   owner_id text PRIMARY KEY,
   name text NOT NULL,
@@ -138,15 +149,6 @@ CREATE TABLE IF NOT EXISTS saved_posts (
   created_at bigint NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS saved_posts_owner_post_idx ON saved_posts(owner_id, post_id);
-
-CREATE TABLE IF NOT EXISTS post_likes (
-  id text PRIMARY KEY,
-  owner_id text NOT NULL,
-  post_id text NOT NULL,
-  created_at bigint NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS post_likes_owner_post_idx ON post_likes(owner_id, post_id);
-CREATE INDEX IF NOT EXISTS post_likes_post_idx ON post_likes(post_id);
 
 CREATE TABLE IF NOT EXISTS follows (
   id text PRIMARY KEY,

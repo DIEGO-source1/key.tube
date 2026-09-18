@@ -1,0 +1,15 @@
+Ethereum principal en KeyTube
+
+1. Detén el servidor con Ctrl+C.
+2. Extrae este ZIP dentro de la carpeta keytube que ya tiene las dependencias instaladas.
+3. Ejecuta desde esa carpeta:
+
+node .\actualizar-keytube\instalar.mjs
+pnpm.cmd build
+node .\scripts\start-local.mjs
+
+Continúa con el siguiente comando solo si el anterior terminó sin errores.
+Esta actualización no necesita migraciones ni reinstalar dependencias.
+Abre http://127.0.0.1:5173 cuando indique KeyTube listo.
+En Mis planes selecciona Ethereum · red principal.
+Necesitas ETH real en Ethereum Mainnet para pagar las comisiones. Tu wallet muestra y confirma las operaciones.

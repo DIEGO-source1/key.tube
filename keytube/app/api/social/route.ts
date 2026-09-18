@@ -15,15 +15,13 @@ export async function POST(req: Request) {
     const user = await requireCreator();
     const data = z
       .object({
-        kind: z.enum(["save", "follow", "like"]),
+        kind: z.enum(["save", "follow"]),
         target: z.string().min(1).max(120),
         active: z.boolean(),
       })
       .parse(await readJson(req));
-    if (data.kind === "follow" && data.target === user.userId)
-      throw new AppError(400, "No puedes seguir tu propia cuenta.");
     const exists =
-      data.kind === "save" || data.kind === "like"
+      data.kind === "save"
         ? await db()
             .prepare("SELECT id FROM posts WHERE id = ?")
             .bind(data.target)
@@ -33,8 +31,8 @@ export async function POST(req: Request) {
             .bind(data.target)
             .first();
     if (!exists) throw new AppError(404, "El contenido o creador no existe.");
-    const table = data.kind === "save" ? "saved_posts" : data.kind === "like" ? "post_likes" : "follows",
-      column = data.kind === "follow" ? "creator_id" : "post_id";
+    const table = data.kind === "save" ? "saved_posts" : "follows",
+      column = data.kind === "save" ? "post_id" : "creator_id";
     if (data.active)
       await db()
         .prepare(

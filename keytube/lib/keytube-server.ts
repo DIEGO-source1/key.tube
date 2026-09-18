@@ -65,6 +65,12 @@ export const draftSchema = z
         path: ["assetId"],
         message: "Sube el archivo completo antes de publicar.",
       });
+    if (d.visibility !== "free" && ["video", "audio", "image"].includes(d.type) && !d.previewId)
+      ctx.addIssue({
+        code: "custom",
+        path: ["previewId"],
+        message: "Sube un adelanto separado del archivo completo.",
+      });
   });
 export const proofSchema = z.object({
   challengeId: z.string().uuid(),
@@ -135,7 +141,6 @@ export type StoredPost = {
   owner_id: string;
   wallet: Address;
   creator: string;
-  avatar?: string;
   title: string;
   intro: string;
   body: string;
@@ -146,8 +151,6 @@ export type StoredPost = {
   plan_id?: string | null;
   premium_lock?: string | null;
   views?: number;
-  likes?: number;
-  comment_count?: number;
   type?: import("./keytube-types").ContentType;
   category?: string;
   thumbnail_id?: string | null;
@@ -156,7 +159,7 @@ export type StoredPost = {
 };
 export async function getPost(id: string) {
   const p = await db()
-    .prepare("SELECT posts.*, COALESCE((SELECT name FROM profiles WHERE owner_id=posts.owner_id), posts.creator) AS creator, (SELECT avatar FROM profiles WHERE owner_id=posts.owner_id) AS avatar, (SELECT COUNT(*) FROM post_likes WHERE post_id=posts.id) AS likes, (SELECT COUNT(*) FROM comments WHERE post_id=posts.id) AS comment_count FROM posts WHERE id = ?")
+    .prepare("SELECT * FROM posts WHERE id = ?")
     .bind(id)
     .first<StoredPost>();
   if (!p) throw new AppError(404, "Esta publicación no existe.");
@@ -166,7 +169,6 @@ export function publicPost(p: StoredPost) {
   return {
     id: p.id,
     creator: p.creator,
-    avatar: p.avatar || undefined,
     creator_id: p.owner_id || p.wallet,
     visibility: p.visibility || "members",
     plan_id: p.plan_id || null,
@@ -177,19 +179,10 @@ export function publicPost(p: StoredPost) {
     network: p.network,
     created_at: p.created_at,
     views: p.views || 0,
-    likes: p.likes || 0,
-    comment_count: p.comment_count || 0,
     type: p.type || "text",
     category: p.category || "Educación",
     thumbnail_url: p.thumbnail_id ? `/api/media/${p.thumbnail_id}` : undefined,
-    // En contenido gratuito el feed puede reproducir/mostrar el archivo completo.
-    // En contenido de miembros solo se publica el adelanto seguro.
-    preview_url:
-      p.visibility === "free" && p.asset_id
-        ? `/api/media/${p.asset_id}?public=${p.id}`
-        : p.preview_id
-          ? `/api/media/${p.preview_id}`
-          : undefined,
+    preview_url: p.preview_id ? `/api/media/${p.preview_id}` : undefined,
   };
 }
 export async function consumeProof(

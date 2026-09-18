@@ -7,7 +7,6 @@ BEGIN;
 
 DELETE FROM media_grants;
 DELETE FROM saved_posts;
-DELETE FROM post_likes;
 DELETE FROM follows;
 DELETE FROM comments;
 DELETE FROM creator_plans;

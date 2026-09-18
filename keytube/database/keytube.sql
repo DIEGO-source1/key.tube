@@ -80,6 +80,15 @@ CREATE TABLE `oauth_states` (
 	`expires_at` integer NOT NULL
 );
 
+CREATE TABLE `password_recovery_codes` (
+	`flow_hash` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`code_hash` text NOT NULL,
+	`attempts` integer DEFAULT 0 NOT NULL,
+	`created_at` integer NOT NULL,
+	`expires_at` integer NOT NULL
+);
+
 CREATE TABLE `posts` (
 	`id` text PRIMARY KEY NOT NULL,
 	`owner_id` text NOT NULL,
@@ -132,6 +141,10 @@ CREATE INDEX `comments_post_created_idx` ON `comments` (`post_id`,`created_at`);
 CREATE UNIQUE INDEX `follows_owner_creator_idx` ON `follows` (`owner_id`,`creator_id`);
 
 CREATE INDEX `media_grants_expiry_idx` ON `media_grants` (`expires_at`);
+
+CREATE INDEX `password_recovery_expiry_idx` ON `password_recovery_codes` (`expires_at`);
+
+CREATE INDEX `password_recovery_user_idx` ON `password_recovery_codes` (`user_id`);
 
 CREATE UNIQUE INDEX `plans_lock_network_idx` ON `creator_plans` (`lock`,`network`);
 
