@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     sameOrigin(req);
     const user = await requireCreator();
     const role = z
-      .enum(["thumbnail", "preview", "full", "avatar"])
+      .enum(["thumbnail", "preview", "full", "avatar", "cover"])
       .parse(new URL(req.url).searchParams.get("role"));
     const mime = (req.headers.get("content-type") || "")
       .split(";")[0]
@@ -25,13 +25,15 @@ export async function POST(req: Request) {
         .slice(0, 150) || "archivo";
     if (role === "full")
       throw new AppError(400, "Los archivos completos se suben con la carga directa de hasta 500 MB.");
-    const uploadLimit = role === "avatar" ? 5 * 1024 * 1024 : MAX_UPLOAD;
+    const uploadLimit = role === "avatar" ? 5 * 1024 * 1024 : role === "cover" ? 10 * 1024 * 1024 : MAX_UPLOAD;
     if (Number(req.headers.get("content-length") || 0) > uploadLimit)
       throw new AppError(
         413,
         role === "avatar"
           ? "La foto de perfil debe pesar como máximo 5 MB."
-          : "El límite por archivo es 20 MB.",
+          : role === "cover"
+            ? "La portada del perfil debe pesar como máximo 10 MB."
+            : "El límite por archivo es 20 MB.",
       );
     const total = await db()
       .prepare(
@@ -55,7 +57,9 @@ export async function POST(req: Request) {
           413,
           role === "avatar"
             ? "La foto de perfil debe pesar como máximo 5 MB."
-            : "El límite por archivo es 20 MB.",
+            : role === "cover"
+              ? "La portada del perfil debe pesar como máximo 10 MB."
+              : "El límite por archivo es 20 MB.",
         );
       }
       chunks.push(value);
@@ -73,12 +77,14 @@ export async function POST(req: Request) {
         400,
         "Formato no admitido o contenido del archivo inválido.",
       );
-    if ((role === "thumbnail" || role === "avatar") && !mime.startsWith("image/"))
+    if ((role === "thumbnail" || role === "avatar" || role === "cover") && !mime.startsWith("image/"))
       throw new AppError(
         400,
         role === "avatar"
           ? "La foto de perfil debe ser JPG, PNG o WEBP."
-          : "La portada debe ser JPG, PNG o WEBP.",
+          : role === "cover"
+            ? "La portada del perfil debe ser JPG, PNG o WEBP."
+            : "La portada debe ser JPG, PNG o WEBP.",
       );
     if (role === "preview" && ![
       "video/webm",

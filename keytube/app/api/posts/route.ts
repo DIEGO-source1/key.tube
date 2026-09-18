@@ -19,6 +19,7 @@ import {
 import { verifyRealLock, rpcClient, lockAbi } from "@/lib/unlock";
 import { ownerPlans } from "@/lib/plans";
 import { validateAssets } from "@/lib/media";
+import { ensureV10Schema, notify } from "@/lib/v10";
 import type { Address } from "viem";
 
 export const dynamic = "force-dynamic";
@@ -28,46 +29,72 @@ const sortSchema = z
   .catch("newest");
 
 const sortSql = {
-  newest: "created_at DESC",
-  oldest: "created_at ASC",
-  views_desc: "views DESC, created_at DESC",
-  views_asc: "views ASC, created_at DESC",
+  newest: "p.created_at DESC",
+  oldest: "p.created_at ASC",
+  views_desc: "p.views DESC, p.created_at DESC",
+  views_asc: "p.views ASC, p.created_at DESC",
 } as const;
 
 export async function GET(req: Request) {
   try {
+    await ensureV10Schema();
     const query = new URL(req.url).searchParams;
     const id = query.get("id");
+    const viewer = await getAppUser();
 
     if (id) {
       const postId = z.string().uuid().parse(id);
       if (query.get("track") === "1") {
-        await db()
-          .prepare("UPDATE posts SET views = views + 1 WHERE id = ?")
-          .bind(postId)
-          .run();
+        await db().prepare("UPDATE posts SET views = views + 1 WHERE id = ?").bind(postId).run();
+        if (viewer) {
+          const now = Date.now();
+          await db().prepare(`INSERT INTO view_history (id,owner_id,post_id,progress,position_seconds,updated_at)
+            VALUES (?,?,?,0,0,?) ON CONFLICT(owner_id,post_id) DO UPDATE SET updated_at=excluded.updated_at`)
+            .bind(crypto.randomUUID(), viewer.userId, postId, now).run();
+        }
       }
-      return response({ post: publicPost(await getPost(postId)) });
+      const result = publicPost(await getPost(postId));
+      if (viewer) {
+        const liked = await db().prepare("SELECT id FROM post_likes WHERE owner_id=? AND post_id=?").bind(viewer.userId, postId).first();
+        (result as typeof result & {liked:boolean}).liked = !!liked;
+      }
+      return response({ post: result });
     }
 
     const mine = query.get("mine") === "1";
-    const user = mine ? await getAppUser() : null;
-    if (mine && !user)
-      throw new AppError(401, "Inicia sesión para ver tus publicaciones.");
-
+    if (mine && !viewer) throw new AppError(401, "Inicia sesión para ver tus publicaciones.");
     const sort = sortSchema.parse(query.get("sort") || "newest");
-    const fields =
-      "id, owner_id, wallet, creator, title, intro, lock, network, created_at, views, type, category, thumbnail_id, preview_id, asset_id, visibility, plan_id, premium_lock";
     const order = sortSql[sort];
-    const querySQL = mine
-      ? db()
-          .prepare(
-            `SELECT ${fields} FROM posts WHERE owner_id=? ORDER BY ${order} LIMIT 100`,
-          )
-          .bind(user!.userId)
-      : db().prepare(`SELECT ${fields} FROM posts ORDER BY ${order} LIMIT 100`);
+    const q = (query.get("q") || "").trim().toLowerCase().slice(0, 100);
+    const type = query.get("type") || "";
+    const visibility = query.get("visibility") || "";
+    const category = query.get("category") || "";
 
-    const rows = (await querySQL.all<StoredPost>()).results.map(publicPost);
+    const where: string[] = [];
+    const values: unknown[] = [];
+    if (mine) { where.push("p.owner_id=?"); values.push(viewer!.userId); }
+    if (q) { where.push("(lower(p.title) LIKE ? OR lower(p.creator) LIKE ? OR lower(p.category) LIKE ? OR lower(p.intro) LIKE ?)"); const like=`%${q}%`; values.push(like,like,like,like); }
+    if (["video","image","audio","text","document"].includes(type)) { where.push("p.type=?"); values.push(type); }
+    if (["free","members"].includes(visibility)) { where.push("p.visibility=?"); values.push(visibility); }
+    if (category) { where.push("p.category=?"); values.push(category.slice(0,35)); }
+
+    // A blocked creator never appears in the viewer feed/search.
+    if (viewer && !mine) { where.push("NOT EXISTS (SELECT 1 FROM blocks b WHERE b.owner_id=? AND b.blocked_user_id=p.owner_id)"); values.push(viewer.userId); }
+
+    const sql = `SELECT p.id,p.owner_id,p.wallet,p.creator,p.title,p.intro,p.lock,p.network,p.created_at,p.views,p.type,p.category,p.thumbnail_id,p.preview_id,p.asset_id,p.visibility,p.plan_id,p.premium_lock,
+      pr.avatar,pr.verified,
+      (SELECT COUNT(*) FROM post_likes l WHERE l.post_id=p.id) AS likes,
+      (SELECT COUNT(*) FROM comments c WHERE c.post_id=p.id) AS comment_count
+      FROM posts p LEFT JOIN profiles pr ON pr.owner_id=p.owner_id
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY ${order} LIMIT 120`;
+    const rows = (await db().prepare(sql).bind(...values).all<StoredPost>()).results.map(publicPost);
+
+    if (viewer && rows.length) {
+      const likedRows = await db().prepare("SELECT post_id FROM post_likes WHERE owner_id=?").bind(viewer.userId).all<{post_id:string}>();
+      const liked = new Set(likedRows.results.map(x => x.post_id));
+      for (const item of rows) (item as typeof item & {liked:boolean}).liked = liked.has(item.id);
+    }
     return response({ posts: rows });
   } catch (e) {
     return failure(e);
@@ -77,6 +104,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     sameOrigin(req);
+    await ensureV10Schema();
     const user = await requireCreator();
     const data = await readJson(req);
     const draft = draftSchema.parse(data.draft);
@@ -161,6 +189,10 @@ export async function POST(req: Request) {
         premiumLock,
       )
       .run();
+    const followers = await db().prepare("SELECT owner_id FROM follows WHERE creator_id=? ORDER BY created_at DESC LIMIT 500").bind(user.userId).all<{owner_id:string}>();
+    for (const follower of followers.results) {
+      await notify({ownerId:follower.owner_id,actorId:user.userId,type:"new_post",targetId:id,message:`${draft.creator} publicó «${draft.title}».`});
+    }
     return response({ post: publicPost(await getPost(id)) }, 201);
   } catch (e) {
     return failure(e);

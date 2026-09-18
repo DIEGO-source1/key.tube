@@ -9,9 +9,11 @@ import {
   AppError,
 } from "@/lib/keytube-server";
 import { getAsset, deleteStorageKey } from "@/lib/media";
+import { ensureV10Schema } from "@/lib/v10";
 export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
+    await ensureV10Schema();
     const user = await requireCreator();
     const post = await getPost(
       z.string().uuid().parse(new URL(req.url).searchParams.get("post")),
@@ -32,6 +34,7 @@ export async function GET(req: Request) {
 }
 export async function DELETE(req: Request) {
   try {
+    await ensureV10Schema();
     sameOrigin(req);
     const user = await requireCreator();
     const post = await getPost(

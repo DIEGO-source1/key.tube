@@ -14,6 +14,7 @@ import {
   AppError,
 } from "@/lib/keytube-server";
 import { planSchema } from "@/lib/plans";
+import { ensureV10Schema } from "@/lib/v10";
 export const dynamic = "force-dynamic";
 const schema = z.object({
   purpose: z.enum(["read", "publish", "plan", "wallet"]),
@@ -25,6 +26,7 @@ const schema = z.object({
 });
 export async function POST(req: Request) {
   try {
+    await ensureV10Schema();
     sameOrigin(req);
     const data = schema.parse(await readJson(req));
     const now = Date.now();

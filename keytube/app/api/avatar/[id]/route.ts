@@ -1,5 +1,6 @@
 import { db, AppError, failure } from "@/lib/keytube-server";
 import { getAsset, bucket } from "@/lib/media";
+import { ensureV10Schema } from "@/lib/v10";
 
 export const dynamic = "force-dynamic";
 
@@ -8,20 +9,21 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    await ensureV10Schema();
     const { id } = await params;
     const asset = await getAsset(id);
-    if (asset.role !== "avatar" || !asset.mime.startsWith("image/"))
-      throw new AppError(404, "Foto de perfil no encontrada.");
+    if (!(["avatar", "cover"].includes(asset.role)) || !asset.mime.startsWith("image/"))
+      throw new AppError(404, "Imagen de perfil no encontrada.");
 
+    const value = `asset:${id}`;
     const used = await db()
-      .prepare("SELECT owner_id FROM profiles WHERE avatar=? LIMIT 1")
-      .bind(`asset:${id}`)
+      .prepare("SELECT owner_id FROM profiles WHERE avatar=? OR cover=? LIMIT 1")
+      .bind(value, value)
       .first();
-    if (!used) throw new AppError(404, "Foto de perfil no encontrada.");
+    if (!used) throw new AppError(404, "Imagen de perfil no encontrada.");
 
     const object = await bucket().get(asset.storage_key);
-    if (!object) throw new AppError(404, "Foto de perfil no disponible.");
-
+    if (!object) throw new AppError(404, "Imagen de perfil no disponible.");
     const body = new ArrayBuffer(object.body.byteLength);
     new Uint8Array(body).set(object.body);
     return new Response(body, {

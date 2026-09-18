@@ -18,8 +18,6 @@ export async function imagePreview(file:File) {
   ctx.imageSmoothingEnabled=false;
   ctx.drawImage(tiny,0,0,tinyWidth,tinyHeight,0,0,width,height);
   ctx.fillStyle='#05091655';ctx.fillRect(0,0,width,height);
-  ctx.fillStyle='#050916d9';ctx.fillRect(0,height-52,width,52);
-  ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.fillText('KEYTUBE · VISTA PIXELADA',16,height-22);
   bitmap.close();
   return new File([await blobFromCanvas(canvas)],'vista-pixelada.jpg',{type:'image/jpeg'});
 }
@@ -28,7 +26,7 @@ export async function documentPreview(file:File,pages=3) {
   const safePages=Math.max(1,Math.min(10,Math.round(pages||3)));
   const mime=(file.type||'').toLowerCase();
   if(mime==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')) {
-    const {PDFDocument,StandardFonts,rgb}=await import('pdf-lib');
+    const {PDFDocument}=await import('pdf-lib');
     const input=await file.arrayBuffer();
     const source=await PDFDocument.load(input);
     const total=source.getPageCount();
@@ -37,12 +35,6 @@ export async function documentPreview(file:File,pages=3) {
     const output=await PDFDocument.create();
     const copied=await output.copyPages(source,Array.from({length:count},(_,i)=>i));
     copied.forEach(page=>output.addPage(page));
-    const font=await output.embedFont(StandardFonts.HelveticaBold);
-    for(const page of output.getPages()) {
-      const {width,height}=page.getSize();
-      page.drawRectangle({x:0,y:Math.max(0,height-26),width,height:26,color:rgb(0.02,0.04,0.09),opacity:.78});
-      page.drawText(`KEYTUBE · ADELANTO GRATIS · ${count} ${count===1?'PAGINA':'PAGINAS'}`,{x:12,y:Math.max(7,height-18),size:9,font,color:rgb(1,1,1)});
-    }
     const bytes=await output.save({useObjectStreams:true});
     const copy=Uint8Array.from(bytes);
     return new File([copy.buffer],`adelanto-${count}-paginas.pdf`,{type:'application/pdf'});
@@ -51,10 +43,7 @@ export async function documentPreview(file:File,pages=3) {
     const text=await file.text();
     const charsPerPage=2800,count=Math.min(text.length,safePages*charsPerPage);
     const clipped=text.slice(0,count);
-    const suffix=count<text.length?'\n\n--- FIN DEL ADELANTO GRATIS · DESBLOQUEA PARA CONTINUAR ---\n':'';
-    return new File([`KEYTUBE · ADELANTO GRATIS · ${safePages} PAGINA(S) APROX.
-
-${clipped}${suffix}`],`adelanto-${safePages}-paginas.txt`,{type:'text/plain'});
+    return new File([clipped],`adelanto-${safePages}-paginas.txt`,{type:'text/plain'});
   }
   throw new Error('Para documentos exclusivos usa PDF o TXT.');
 }

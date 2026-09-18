@@ -22,6 +22,7 @@ export type PublicPost = {
   likes?: number;
   comment_count?: number;
   liked?: boolean;
+  verified?: boolean;
 };
 
 export type Draft = {

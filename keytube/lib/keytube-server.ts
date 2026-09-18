@@ -156,10 +156,17 @@ export type StoredPost = {
   thumbnail_id?: string | null;
   preview_id?: string | null;
   asset_id?: string | null;
+  avatar?: string;
+  verified?: number;
+  likes?: number;
+  comment_count?: number;
 };
 export async function getPost(id: string) {
   const p = await db()
-    .prepare("SELECT * FROM posts WHERE id = ?")
+    .prepare(`SELECT p.*,pr.avatar,pr.verified,
+      (SELECT COUNT(*) FROM post_likes l WHERE l.post_id=p.id) AS likes,
+      (SELECT COUNT(*) FROM comments c WHERE c.post_id=p.id) AS comment_count
+      FROM posts p LEFT JOIN profiles pr ON pr.owner_id=p.owner_id WHERE p.id = ?`)
     .bind(id)
     .first<StoredPost>();
   if (!p) throw new AppError(404, "Esta publicación no existe.");
@@ -181,6 +188,10 @@ export function publicPost(p: StoredPost) {
     views: p.views || 0,
     type: p.type || "text",
     category: p.category || "Educación",
+    avatar: p.avatar || undefined,
+    verified: !!p.verified,
+    likes: p.likes || 0,
+    comment_count: p.comment_count || 0,
     thumbnail_url: p.thumbnail_id ? `/api/media/${p.thumbnail_id}` : undefined,
     // El contenido gratuito puede usar el archivo completo como media pública.
     // Para publicaciones de pago seguimos exponiendo únicamente el preview separado.

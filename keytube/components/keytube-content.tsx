@@ -12,6 +12,12 @@ import {
   Eye,
   Volume2,
   VolumeX,
+  Heart,
+  MessageCircle,
+  Share2,
+  UserPlus,
+  UserCheck,
+  BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PublicPost, FullContent } from "@/lib/keytube-types";
@@ -66,13 +72,14 @@ export function ContentCard({
   onOpen,
   onSave,
   onCreator,
-  liked,
-  following,
-  canFollow,
+  liked = post.liked || false,
+  following = false,
+  canFollow = true,
   onLike,
   onFollow,
   onShare,
   onComments,
+  onProgress,
 }: {
   post: PublicPost;
   saved: boolean;
@@ -87,156 +94,91 @@ export function ContentCard({
   onFollow?: () => void;
   onShare?: () => void;
   onComments?: () => void;
+  onProgress?: (seconds:number,progress:number)=>void;
 }) {
-  const Icon =
-    post.type === "audio"
-      ? Headphones
-      : post.type === "image"
-        ? ImageIcon
-        : post.type === "text" || post.type === "document"
-          ? FileText
-          : Play;
-  const published = new Date(post.created_at).toLocaleDateString("es-BO", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-  const cardThumbnail = post.type === "image"
-    ? post.visibility === "free"
-      ? (post.preview_url || post.thumbnail_url)
-      : (post.preview_url || post.thumbnail_url)
-    : post.thumbnail_url;
+  const Icon = post.type === "audio" ? Headphones : post.type === "image" ? ImageIcon : post.type === "text" || post.type === "document" ? FileText : Play;
+  const published = new Date(post.created_at).toLocaleDateString("es-BO", { day: "2-digit", month: "short", year: "numeric" });
+  const cardThumbnail = post.type === "image" ? (post.preview_url || post.thumbnail_url) : post.thumbnail_url;
   const freeVideoUrl = post.type === "video" && post.visibility === "free" ? post.preview_url : undefined;
   const indexLabel = String(index || 1).padStart(2, "0");
   const feedVideoRef = useRef<HTMLVideoElement>(null);
   const [feedMuted, setFeedMuted] = useState(true);
+  const lastProgress = useRef(0);
+
   function toggleFeedSound() {
     const next = !feedMuted;
     setFeedMuted(next);
     const video = feedVideoRef.current;
-    if (video) {
-      video.muted = next;
-      if (!next) void video.play().catch(() => {});
-    }
+    if (video) { video.muted = next; if (!next) void video.play().catch(() => {}); }
   }
+
   useEffect(() => {
     const video = feedVideoRef.current;
     if (!video || !freeVideoUrl) return;
-
     let mostlyVisible = false;
+    const active = (event: Event) => {
+      const id=(event as CustomEvent<string>).detail;
+      if(id!==post.id && !video.paused) video.pause();
+    };
     const syncPlayback = () => {
-      if (document.hidden || !mostlyVisible) {
-        if (!video.paused) video.pause();
-        return;
-      }
+      if (document.hidden || !mostlyVisible) { if (!video.paused) video.pause(); return; }
       if (video.paused) void video.play().catch(() => {});
     };
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        mostlyVisible = entry.isIntersecting && entry.intersectionRatio >= 0.55;
-        syncPlayback();
-      },
-      { threshold: [0, 0.25, 0.55, 0.75, 1] },
-    );
-
+    const observer = new IntersectionObserver(([entry]) => {
+      mostlyVisible = entry.isIntersecting && entry.intersectionRatio >= 0.55;
+      syncPlayback();
+    }, { threshold: [0, 0.25, 0.55, 0.75, 1] });
     observer.observe(video);
+    window.addEventListener("keytube:video-active",active as EventListener);
     document.addEventListener("visibilitychange", syncPlayback);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("visibilitychange", syncPlayback);
-      video.pause();
-    };
-  }, [freeVideoUrl]);
+    return () => { observer.disconnect(); window.removeEventListener("keytube:video-active",active as EventListener); document.removeEventListener("visibilitychange", syncPlayback); video.pause(); };
+  }, [freeVideoUrl,post.id]);
+
   return (
     <article className="kt-content-card kt-feed-card">
       <header className="kt-feed-card-head">
         <button className="kt-creator-link kt-feed-creator" onClick={onCreator}>
           <CreatorAvatar name={post.creator} avatar={post.avatar} size={42} />
-          <span>
-            <strong>{post.creator}</strong>
-            <small>{published} · {mediaLabels[post.type || "text"]}</small>
-          </span>
+          <span><strong>{post.creator}{post.verified&&<BadgeCheck className="kt-verified" size={15}/>}</strong><small>{published} · {mediaLabels[post.type || "text"]}</small></span>
         </button>
         <div className="kt-feed-head-actions">
+          {canFollow&&onFollow&&<button className={`kt-feed-follow ${following?"selected":""}`} onClick={onFollow} aria-label={following?"Dejar de seguir":"Seguir creador"}>{following?<UserCheck size={17}/>:<UserPlus size={17}/>}<span>{following?"Siguiendo":"Seguir"}</span></button>}
           <span className="kt-feed-index" title={`Publicación ${indexLabel}`}>#{indexLabel}</span>
-          <button
-            className={`kt-feed-save ${saved ? "selected" : ""}`}
-            aria-label={saved ? "Quitar de guardados" : "Guardar publicación"}
-            aria-pressed={saved}
-            onClick={onSave}
-          >
-            <Bookmark size={18} fill={saved ? "currentColor" : "none"} />
-          </button>
+          <button className={`kt-feed-save ${saved ? "selected" : ""}`} aria-label={saved ? "Quitar de guardados" : "Guardar publicación"} aria-pressed={saved} onClick={onSave}><Bookmark size={18} fill={saved ? "currentColor" : "none"} /></button>
         </div>
       </header>
 
       <div className="kt-feed-card-copy">
         <button className="kt-card-title" onClick={onOpen}>{post.title}</button>
         {!!post.intro && <p className="kt-card-intro">{post.intro}</p>}
-        <div className="kt-feed-tags">
-          <span>{mediaLabels[post.type || "text"]}</span>
-          <span>{post.category || "General"}</span>
-          <span>{post.visibility === "free" ? "Público" : "Miembros"}</span>
-        </div>
+        <div className="kt-feed-tags"><span>{mediaLabels[post.type || "text"]}</span><span>{post.category || "General"}</span><span>{post.visibility === "free" ? "Público" : "Miembros"}</span></div>
       </div>
 
       <div className="kt-thumb">
         {freeVideoUrl ? (
           <div className="kt-open-thumbnail kt-free-video-card">
-            <video
-              ref={feedVideoRef}
-              src={freeVideoUrl}
-              poster={post.thumbnail_url}
-              muted={feedMuted}
-              loop
-              playsInline
-              controls
-              preload="metadata"
-              aria-label={`Video gratuito: ${post.title}`}
-            />
-            <button
-              className="kt-video-sound-toggle kt-feed-sound-toggle"
-              type="button"
-              onClick={toggleFeedSound}
-              aria-label={feedMuted ? "Activar sonido" : "Silenciar video"}
-              title={feedMuted ? "Activar sonido" : "Silenciar video"}
-            >
-              {feedMuted ? <VolumeX size={18}/> : <Volume2 size={18}/>}
-            </button>
+            <video ref={feedVideoRef} src={freeVideoUrl} poster={post.thumbnail_url} muted={feedMuted} loop playsInline controls preload="metadata"
+              onPlay={()=>window.dispatchEvent(new CustomEvent("keytube:video-active",{detail:post.id}))}
+              onTimeUpdate={e=>{const v=e.currentTarget;if(!onProgress||!v.duration)return;const second=Math.floor(v.currentTime);if(second-lastProgress.current>=5){lastProgress.current=second;onProgress(second,Math.min(100,Math.round(v.currentTime/v.duration*100)));}}}
+              aria-label={`Video gratuito: ${post.title}`} />
+            <button className="kt-video-sound-toggle kt-feed-sound-toggle" type="button" onClick={toggleFeedSound} aria-label={feedMuted ? "Activar sonido" : "Silenciar video"} title={feedMuted ? "Activar sonido" : "Silenciar video"}>{feedMuted ? <VolumeX size={18}/> : <Volume2 size={18}/>}</button>
           </div>
         ) : (
-          <button
-            className="kt-open-thumbnail"
-            onClick={onOpen}
-            aria-label={`Abrir ${post.title}`}
-          >
-            {cardThumbnail ? (
-              <img className={post.type === "image" && post.visibility !== "free" ? "kt-card-paid-image" : undefined} src={cardThumbnail} alt="" loading="lazy" />
-            ) : (
-              <span className={`kt-generated-cover ${post.type || "text"}`}>
-                <Icon size={54} />
-                <span>{post.category}</span>
-              </span>
-            )}
-            <span className="kt-thumb-play">
-              <Icon
-                size={26}
-                fill={post.type === "video" ? "currentColor" : "none"}
-              />
-            </span>
+          <button className="kt-open-thumbnail" onClick={onOpen} aria-label={`Abrir ${post.title}`}>
+            {cardThumbnail ? <img className={post.type === "image" && post.visibility !== "free" ? "kt-card-paid-image" : undefined} src={cardThumbnail} alt="" loading="lazy" /> : <span className={`kt-generated-cover ${post.type || "text"}`}><Icon size={54} /><span>{post.category}</span></span>}
+            <span className="kt-thumb-play"><Icon size={26} fill={post.type === "video" ? "currentColor" : "none"}/></span>
             {post.duration && <span className="kt-duration">{post.duration}</span>}
           </button>
         )}
       </div>
 
       <footer className="kt-feed-card-footer">
+        <button className={`kt-feed-action ${liked?"selected":""}`} onClick={onLike} disabled={!onLike} aria-label="Me gusta"><Heart size={17} fill={liked?"currentColor":"none"}/><span>{post.likes||0}</span></button>
+        <button className="kt-feed-action" onClick={onComments||onOpen} aria-label="Comentarios"><MessageCircle size={17}/><span>{post.comment_count||0}</span></button>
+        <button className="kt-feed-action" onClick={onShare} disabled={!onShare} aria-label="Compartir"><Share2 size={17}/><span>Compartir</span></button>
         <span className="kt-card-views"><Eye size={14} /> {post.views || 0} vistas</span>
         <span className="kt-card-category">{post.category || "General"}</span>
-        <span className="kt-access-badge">
-          <LockKeyhole size={13} />
-          {post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros"}
-        </span>
+        <span className="kt-access-badge"><LockKeyhole size={13} />{post.visibility === "free" ? "Gratis · contenido completo" : "Solo miembros"}</span>
       </footer>
     </article>
   );
@@ -246,11 +188,15 @@ export function ContentMedia({
   full,
   onError,
   onPreviewEnd,
+  initialPosition = 0,
+  onProgress,
 }: {
   post: PublicPost;
   full: FullContent | null;
   onError: () => void;
   onPreviewEnd?: () => void;
+  initialPosition?: number;
+  onProgress?: (seconds:number,progress:number)=>void;
 }) {
   const url = full?.mediaUrl || post.preview_url;
   const type = post.type || "text";
@@ -259,6 +205,7 @@ export function ContentMedia({
   const pixelRef = useRef<HTMLCanvasElement>(null);
   const [previewBlocked,setPreviewBlocked]=useState(false);
   const [videoMuted,setVideoMuted]=useState(true);
+  const lastReported=useRef(0);
   useEffect(()=>{setPreviewBlocked(false);setVideoMuted(true);},[full?.mediaUrl,post.id]);
   useEffect(() => {
     const video = videoRef.current;
@@ -281,10 +228,13 @@ export function ContentMedia({
       { threshold: [0, 0.25, 0.55, 0.75, 1] },
     );
 
+    const active=(event:Event)=>{const id=(event as CustomEvent<string>).detail;if(id!==post.id&&!video.paused)video.pause();};
     observer.observe(video);
+    window.addEventListener("keytube:video-active",active as EventListener);
     document.addEventListener("visibilitychange", syncPlayback);
     return () => {
       observer.disconnect();
+      window.removeEventListener("keytube:video-active",active as EventListener);
       document.removeEventListener("visibilitychange", syncPlayback);
       video.pause();
     };
@@ -328,8 +278,10 @@ export function ContentMedia({
             poster={post.thumbnail_url}
             src={url}
             onError={onError}
-            onTimeUpdate={e => {if (!full && post.visibility !== "free" && e.currentTarget.currentTime >= 9.8) pixelateAndLock(e.currentTarget);}}
-            onEnded={e => {if (!full && post.visibility !== "free") pixelateAndLock(e.currentTarget);}}
+            onPlay={()=>window.dispatchEvent(new CustomEvent("keytube:video-active",{detail:post.id}))}
+            onLoadedMetadata={e=>{if(initialPosition>0&&e.currentTarget.duration>initialPosition)e.currentTarget.currentTime=initialPosition;}}
+            onTimeUpdate={e => {const v=e.currentTarget;if (!full && post.visibility !== "free" && v.currentTime >= 9.8) pixelateAndLock(v);if(onProgress&&v.duration){const sec=Math.floor(v.currentTime);if(sec-lastReported.current>=5){lastReported.current=sec;onProgress(sec,Math.min(100,Math.round(v.currentTime/v.duration*100)));}}}}
+            onEnded={e => {if (!full && post.visibility !== "free") pixelateAndLock(e.currentTarget);onProgress?.(Math.floor(e.currentTarget.currentTime),100);}}
           />
           {!previewBlocked&&<button
             className="kt-video-sound-toggle"
@@ -380,8 +332,9 @@ export function ContentMedia({
               preload={post.visibility === "free" ? "auto" : "metadata"}
               src={url}
               onError={onError}
-              onTimeUpdate={e => {if (!full && post.visibility !== "free" && e.currentTarget.currentTime >= 10) {e.currentTarget.pause();onPreviewEnd?.();}}}
-              onEnded={() => {if (!full && post.visibility !== "free") onPreviewEnd?.();}}
+              onLoadedMetadata={e=>{if(initialPosition>0&&e.currentTarget.duration>initialPosition)e.currentTarget.currentTime=initialPosition;}}
+              onTimeUpdate={e => {const a=e.currentTarget;if (!full && post.visibility !== "free" && a.currentTime >= 10) {a.pause();onPreviewEnd?.();}if(onProgress&&a.duration){const sec=Math.floor(a.currentTime);if(sec-lastReported.current>=5){lastReported.current=sec;onProgress(sec,Math.min(100,Math.round(a.currentTime/a.duration*100)));}}}}
+              onEnded={() => {if (!full && post.visibility !== "free") onPreviewEnd?.();onProgress?.(0,100);}}
             />
           ) : (
             <p>El audio estará disponible al desbloquear.</p>
@@ -402,7 +355,7 @@ export function ContentMedia({
         ) : (
           <ImageIcon size={60} />
         )}
-        {lockedPreview&&<div className="kt-photo-lock"><LockKeyhole size={30}/><strong>Contenido exclusivo</strong><span>Desbloquea para ver la imagen original.</span></div>}
+        {lockedPreview&&<><div className="kt-paid-watermark">© {post.creator} · KeyTube</div><div className="kt-photo-lock"><LockKeyhole size={30}/><strong>Contenido exclusivo</strong><span>Desbloquea para ver la imagen original.</span></div></>}
       </div>
     );
   }

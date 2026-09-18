@@ -121,65 +121,58 @@ export function ProfileEditor({
   fallbackName,
   onSaved,
 }:{
-  profile:{name:string;bio:string;avatar:string;wallet:string}|null;
+  profile:{name:string;bio:string;avatar:string;cover?:string;website?:string;instagram?:string;youtube?:string;wallet:string}|null;
   fallbackName:string;
   onSaved:()=>Promise<void>|void;
 }) {
   const [name,setName]=useState(profile?.name||fallbackName),
     [bio,setBio]=useState(profile?.bio||''),
     [avatar,setAvatar]=useState(profile?.avatar||''),
+    [cover,setCover]=useState(profile?.cover||''),
+    [website,setWebsite]=useState(profile?.website||''),
+    [instagram,setInstagram]=useState(profile?.instagram||''),
+    [youtube,setYoutube]=useState(profile?.youtube||''),
     [photo,setPhoto]=useState<File|null>(null),
+    [coverFile,setCoverFile]=useState<File|null>(null),
     [preview,setPreview]=useState(''),
-    [busy,setBusy]=useState(false),
-    [status,setStatus]=useState(''),
-    [error,setError]=useState('');
+    [coverPreview,setCoverPreview]=useState(''),
+    [busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState('');
 
-  useEffect(()=>{
-    setName(profile?.name||fallbackName);
-    setBio(profile?.bio||'');
-    setAvatar(profile?.avatar||'');
-  },[profile?.name,profile?.bio,profile?.avatar,fallbackName]);
+  useEffect(()=>{setName(profile?.name||fallbackName);setBio(profile?.bio||'');setAvatar(profile?.avatar||'');setCover(profile?.cover||'');setWebsite(profile?.website||'');setInstagram(profile?.instagram||'');setYoutube(profile?.youtube||'');},[profile?.name,profile?.bio,profile?.avatar,profile?.cover,profile?.website,profile?.instagram,profile?.youtube,fallbackName]);
+  useEffect(()=>{if(!photo){setPreview('');return;}const url=URL.createObjectURL(photo);setPreview(url);return()=>URL.revokeObjectURL(url);},[photo]);
+  useEffect(()=>{if(!coverFile){setCoverPreview('');return;}const url=URL.createObjectURL(coverFile);setCoverPreview(url);return()=>URL.revokeObjectURL(url);},[coverFile]);
 
-  useEffect(()=>{
-    if(!photo){setPreview('');return;}
-    const url=URL.createObjectURL(photo);setPreview(url);
-    return()=>URL.revokeObjectURL(url);
-  },[photo]);
-
+  async function uploadProfileImage(file:File,role:'avatar'|'cover'){
+    const limit=role==='avatar'?5:10;if(file.size>limit*1024*1024)throw new Error(`La imagen debe pesar como máximo ${limit} MB.`);
+    const mime=file.type.split(';')[0].toLowerCase();if(!['image/jpeg','image/png','image/webp'].includes(mime))throw new Error('La imagen debe ser JPG, PNG o WEBP.');
+    const r=await fetch(`/api/uploads?role=${role}`,{method:'POST',headers:{'Content-Type':mime,'X-File-Name':encodeURIComponent(file.name||role)},body:file});
+    const data=await r.json() as {asset?:Asset;error?:string};if(!r.ok||!data.asset)throw new Error(data.error||'No se pudo subir la imagen.');return `asset:${data.asset.id}`;
+  }
   async function save(e:FormEvent){e.preventDefault();setBusy(true);setError('');setStatus('');try{
-    let nextAvatar=avatar;
-    if(photo){
-      if(photo.size>5*1024*1024)throw new Error('La foto de perfil debe pesar como máximo 5 MB.');
-      const mime=photo.type.split(';')[0].toLowerCase();
-      if(!['image/jpeg','image/png','image/webp'].includes(mime))throw new Error('La foto debe ser JPG, PNG o WEBP.');
-      setStatus('Subiendo tu foto de perfil…');
-      const r=await fetch('/api/uploads?role=avatar',{method:'POST',headers:{'Content-Type':mime,'X-File-Name':encodeURIComponent(photo.name||'avatar')},body:photo});
-      const data=await r.json() as {asset?:Asset;error?:string};
-      if(!r.ok||!data.asset)throw new Error(data.error||'No se pudo subir la foto de perfil.');
-      nextAvatar=`asset:${data.asset.id}`;
-    }
+    let nextAvatar=avatar,nextCover=cover;
+    if(photo){setStatus('Subiendo tu foto de perfil…');nextAvatar=await uploadProfileImage(photo,'avatar');}
+    if(coverFile){setStatus('Subiendo la portada del perfil…');nextCover=await uploadProfileImage(coverFile,'cover');}
     setStatus('Guardando tu perfil…');
-    await api('/api/account',{name,bio,avatar:nextAvatar});
-    setAvatar(nextAvatar);setPhoto(null);setStatus('Perfil actualizado.');
-    await onSaved();
+    await api('/api/account',{name,bio,avatar:nextAvatar,cover:nextCover,website,instagram,youtube});
+    setAvatar(nextAvatar);setCover(nextCover);setPhoto(null);setCoverFile(null);setStatus('Perfil actualizado.');await onSaved();
   }catch(e){setError(errorText(e));setStatus('');}finally{setBusy(false);}}
-
-  const shownAvatar=photo?null:avatar;
+  const coverUrl=coverPreview||(cover.startsWith('asset:')?`/api/avatar/${cover.slice(6)}`:'');
   return <form className="k2-form k2-profile-editor" onSubmit={save}>
+    <div className="k2-profile-cover-editor" style={coverUrl?{backgroundImage:`linear-gradient(#07101a55,#07101acc),url(${coverUrl})`}:undefined}>
+      <strong>Portada de creador</strong><span>JPG, PNG o WEBP · máximo 10 MB</span>
+      <label className="k2-secondary k2-file-button"><Camera size={16}/> Elegir portada<input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e=>setCoverFile(e.target.files?.[0]||null)}/></label>
+      {(cover||coverFile)&&<button type="button" className="k2-secondary" onClick={()=>{setCoverFile(null);setCover('');}}>Quitar portada</button>}
+    </div>
     <div className="k2-profile-photo-row">
-      {preview?<img className="kt-avatar k2-profile-photo-preview" src={preview} alt="Vista previa de tu foto" width={96} height={96}/>:<CreatorAvatar name={name||fallbackName} avatar={shownAvatar||undefined} size={96}/>}
-      <div className="k2-profile-photo-actions">
-        <strong>Foto de perfil</strong>
-        <span>JPG, PNG o WEBP · máximo 5 MB</span>
-        <label className="k2-secondary k2-file-button"><Camera size={16}/> Elegir foto<input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e=>setPhoto(e.target.files?.[0]||null)}/></label>
-        {(avatar||photo)&&<button type="button" className="k2-secondary" onClick={()=>{setPhoto(null);setAvatar('');setStatus('Se usarán tus iniciales al guardar.');}}><Trash2 size={15}/> Quitar foto</button>}
-      </div>
+      {preview?<img className="kt-avatar k2-profile-photo-preview" src={preview} alt="Vista previa de tu foto" width={96} height={96}/>:<CreatorAvatar name={name||fallbackName} avatar={(photo?undefined:avatar)||undefined} size={96}/>} 
+      <div className="k2-profile-photo-actions"><strong>Foto de perfil</strong><span>JPG, PNG o WEBP · máximo 5 MB</span><label className="k2-secondary k2-file-button"><Camera size={16}/> Elegir foto<input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e=>setPhoto(e.target.files?.[0]||null)}/></label>{(avatar||photo)&&<button type="button" className="k2-secondary" onClick={()=>{setPhoto(null);setAvatar('');}}>Quitar foto</button>}</div>
     </div>
     <label>Nombre público<input value={name} onChange={e=>setName(e.target.value)} required minLength={2} maxLength={65}/></label>
     <label>Sobre ti<textarea value={bio} onChange={e=>setBio(e.target.value)} maxLength={500} rows={5} placeholder="Cuenta qué creas, qué te interesa o qué encontrará tu comunidad."/></label>
+    <div className="k2-columns"><label>Sitio web<input type="url" value={website} onChange={e=>setWebsite(e.target.value)} maxLength={240} placeholder="https://tuweb.com"/></label><label>Instagram<input type="url" value={instagram} onChange={e=>setInstagram(e.target.value)} maxLength={240} placeholder="https://instagram.com/usuario"/></label></div>
+    <label>YouTube<input type="url" value={youtube} onChange={e=>setYoutube(e.target.value)} maxLength={240} placeholder="https://youtube.com/@canal"/></label>
     <button className="k2-primary" disabled={busy}>{busy?<LoaderCircle className="k2-spin" size={17}/>:<Check size={17}/>} {busy?'Guardando…':'Guardar cambios del perfil'}</button>
-    {status&&<p className="k2-notice" role="status">{status}</p>}
-    {error&&<p className="k2-error" role="alert">{error}</p>}
+    {status&&<p className="k2-notice" role="status">{status}</p>}{error&&<p className="k2-error" role="alert">{error}</p>}
   </form>;
 }
 

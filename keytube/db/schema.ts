@@ -89,6 +89,12 @@ export const profiles = pgTable("profiles", {
   name: text("name").notNull(),
   bio: text("bio").notNull().default(""),
   avatar: text("avatar").notNull().default("valeria"),
+  cover: text("cover").notNull().default(""),
+  website: text("website").notNull().default(""),
+  instagram: text("instagram").notNull().default(""),
+  youtube: text("youtube").notNull().default(""),
+  verified: integer("verified").notNull().default(0),
+  role: text("role").notNull().default("user"),
   wallet: text("wallet").notNull().default(""),
   updatedAt: epochMs("updated_at").notNull(),
 });
@@ -123,6 +129,7 @@ export const comments = pgTable(
     postId: text("post_id").notNull(),
     name: text("name").notNull(),
     body: text("body").notNull(),
+    parentId: text("parent_id"),
     createdAt: epochMs("created_at").notNull(),
   },
   (t) => [index("comments_post_created_idx").on(t.postId, t.createdAt)],
@@ -208,4 +215,108 @@ export const creatorPlans = pgTable(
     uniqueIndex("plans_owner_slot_idx").on(t.ownerId, t.slot),
     uniqueIndex("plans_lock_network_idx").on(t.lock, t.network),
   ],
+);
+
+
+export const postLikes = pgTable(
+  "post_likes",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    postId: text("post_id").notNull(),
+    createdAt: epochMs("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("post_likes_owner_post_idx").on(t.ownerId, t.postId)],
+);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    actorId: text("actor_id"),
+    type: text("type").notNull(),
+    targetId: text("target_id"),
+    message: text("message").notNull(),
+    readAt: epochMs("read_at"),
+    createdAt: epochMs("created_at").notNull(),
+  },
+  (t) => [index("notifications_owner_created_idx").on(t.ownerId, t.createdAt)],
+);
+
+export const viewHistory = pgTable(
+  "view_history",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    postId: text("post_id").notNull(),
+    progress: integer("progress").notNull().default(0),
+    positionSeconds: integer("position_seconds").notNull().default(0),
+    updatedAt: epochMs("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("view_history_owner_post_idx").on(t.ownerId, t.postId)],
+);
+
+export const collections = pgTable(
+  "collections",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    name: text("name").notNull(),
+    createdAt: epochMs("created_at").notNull(),
+    updatedAt: epochMs("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("collections_owner_name_idx").on(t.ownerId, t.name)],
+);
+
+export const collectionPosts = pgTable(
+  "collection_posts",
+  {
+    id: text("id").primaryKey(),
+    collectionId: text("collection_id").notNull(),
+    postId: text("post_id").notNull(),
+    createdAt: epochMs("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("collection_posts_collection_post_idx").on(t.collectionId, t.postId)],
+);
+
+export const reports = pgTable(
+  "reports",
+  {
+    id: text("id").primaryKey(),
+    reporterId: text("reporter_id").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    reason: text("reason").notNull(),
+    details: text("details").notNull().default(""),
+    status: text("status").notNull().default("open"),
+    createdAt: epochMs("created_at").notNull(),
+    resolvedAt: epochMs("resolved_at"),
+  },
+  (t) => [index("reports_status_created_idx").on(t.status, t.createdAt)],
+);
+
+export const blocks = pgTable(
+  "blocks",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    blockedUserId: text("blocked_user_id").notNull(),
+    createdAt: epochMs("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("blocks_owner_user_idx").on(t.ownerId, t.blockedUserId)],
+);
+
+export const accessHistory = pgTable(
+  "access_history",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    creatorId: text("creator_id").notNull(),
+    postId: text("post_id").notNull(),
+    lockAddress: text("lock_address").notNull(),
+    network: integer("network").notNull(),
+    verifiedAt: epochMs("verified_at").notNull(),
+  },
+  (t) => [index("access_history_owner_idx").on(t.ownerId, t.verifiedAt)],
 );

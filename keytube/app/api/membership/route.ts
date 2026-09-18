@@ -6,9 +6,11 @@ import {
   failure,
 } from "@/lib/keytube-server";
 import { getMembership } from "@/lib/unlock";
+import { ensureV10Schema } from "@/lib/v10";
 export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
+    await ensureV10Schema();
     const url = new URL(req.url);
     const post = await getPost(
       z.string().uuid().parse(url.searchParams.get("post")),

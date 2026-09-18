@@ -1,0 +1,15 @@
+KEYTUBE V10 — PASOS RÁPIDOS
+
+1) Descomprime el ZIP y reemplaza los archivos de tu KeyTube actual.
+2) En Neon SQL Editor ejecuta: neon/005_keytube_v10.sql
+   - NO ejecutes neon/003_reset_all_users_and_content.sql.
+3) En Vercel conserva tus variables actuales y añade ADMIN_EMAILS con tu correo si quieres panel /admin.
+4) Si ya configuraste Google, Resend, Neon y Blob, no vuelvas a crear esas conexiones.
+5) Sube a GitHub:
+   git add .
+   git commit -m "version10 mejoras completas"
+   git push origin main
+6) Espera el deployment de Vercel.
+7) Prueba notificaciones, Para ti, likes/comentarios, perfiles, historial, colecciones, stats y /admin.
+
+README completo: README_KEYTUBE_V10.md
