@@ -15,3 +15,4 @@ KeyTube-arranque-v2
 **/KeyTube-arranque-estable/**
 **/KeyTube-arranque-v2/**
 **/*.tsbuildinfo
+**/tsconfig.tsbuildinfo
