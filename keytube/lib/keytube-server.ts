@@ -65,7 +65,7 @@ export const draftSchema = z
         path: ["assetId"],
         message: "Sube el archivo completo antes de publicar.",
       });
-    if (d.visibility !== "free" && ["video", "audio", "image"].includes(d.type) && !d.previewId)
+    if (d.visibility !== "free" && ["video", "audio", "image", "document"].includes(d.type) && !d.previewId)
       ctx.addIssue({
         code: "custom",
         path: ["previewId"],

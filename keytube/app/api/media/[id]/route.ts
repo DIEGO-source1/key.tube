@@ -106,7 +106,7 @@ export async function GET(
     if (asset.mime === "application/pdf" || asset.mime === "text/plain")
       headers.set(
         "Content-Disposition",
-        `attachment; filename*=UTF-8''${encodeURIComponent(asset.name)}`,
+        `inline; filename*=UTF-8''${encodeURIComponent(asset.name)}`,
       );
     // Next.js/TypeScript's Fetch types require a BodyInit backed by ArrayBuffer,
     // while Neon returns Uint8Array<ArrayBufferLike>. Copy into a plain

@@ -95,7 +95,7 @@ export async function validateAssets(
       );
     if (
       draft.type === "document" &&
-      role === "full" &&
+      (role === "full" || role === "preview") &&
       !["application/pdf", "text/plain"].includes(asset.mime)
     )
       throw new AppError(400, "Sube un documento PDF o TXT.");

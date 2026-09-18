@@ -4,13 +4,59 @@ function blobFromCanvas(canvas:HTMLCanvasElement) {
 }
 export async function imagePreview(file:File) {
   const bitmap=await createImageBitmap(file);
-  const canvas=document.createElement('canvas'),scale=Math.min(1,640/bitmap.width);
-  canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+  const maxWidth=900,scale=Math.min(1,maxWidth/bitmap.width);
+  const width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale));
+  const tiny=document.createElement('canvas');
+  const tinyWidth=Math.min(42,Math.max(18,Math.round(width/18)));
+  const tinyHeight=Math.max(12,Math.round(tinyWidth*(height/width)));
+  tiny.width=tinyWidth;tiny.height=tinyHeight;
+  const tinyCtx=tiny.getContext('2d')!;
+  tinyCtx.drawImage(bitmap,0,0,tinyWidth,tinyHeight);
+
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
   const ctx=canvas.getContext('2d')!;
-  ctx.filter='blur(5px)';ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);ctx.filter='none';
-  ctx.fillStyle='#050916c9';ctx.fillRect(0,canvas.height-44,canvas.width,44);
-  ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.fillText('KEYTUBE · VISTA PREVIA',16,canvas.height-16);
-  bitmap.close();return new File([await blobFromCanvas(canvas)],'vista-previa.jpg',{type:'image/jpeg'});
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(tiny,0,0,tinyWidth,tinyHeight,0,0,width,height);
+  ctx.fillStyle='#05091655';ctx.fillRect(0,0,width,height);
+  ctx.fillStyle='#050916d9';ctx.fillRect(0,height-52,width,52);
+  ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.fillText('KEYTUBE · VISTA PIXELADA',16,height-22);
+  bitmap.close();
+  return new File([await blobFromCanvas(canvas)],'vista-pixelada.jpg',{type:'image/jpeg'});
+}
+
+export async function documentPreview(file:File,pages=3) {
+  const safePages=Math.max(1,Math.min(10,Math.round(pages||3)));
+  const mime=(file.type||'').toLowerCase();
+  if(mime==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')) {
+    const {PDFDocument,StandardFonts,rgb}=await import('pdf-lib');
+    const input=await file.arrayBuffer();
+    const source=await PDFDocument.load(input);
+    const total=source.getPageCount();
+    if(!total)throw new Error('El PDF no contiene páginas.');
+    const count=Math.min(safePages,total);
+    const output=await PDFDocument.create();
+    const copied=await output.copyPages(source,Array.from({length:count},(_,i)=>i));
+    copied.forEach(page=>output.addPage(page));
+    const font=await output.embedFont(StandardFonts.HelveticaBold);
+    for(const page of output.getPages()) {
+      const {width,height}=page.getSize();
+      page.drawRectangle({x:0,y:Math.max(0,height-26),width,height:26,color:rgb(0.02,0.04,0.09),opacity:.78});
+      page.drawText(`KEYTUBE · ADELANTO GRATIS · ${count} ${count===1?'PAGINA':'PAGINAS'}`,{x:12,y:Math.max(7,height-18),size:9,font,color:rgb(1,1,1)});
+    }
+    const bytes=await output.save({useObjectStreams:true});
+    const copy=Uint8Array.from(bytes);
+    return new File([copy.buffer],`adelanto-${count}-paginas.pdf`,{type:'application/pdf'});
+  }
+  if(mime==='text/plain'||file.name.toLowerCase().endsWith('.txt')) {
+    const text=await file.text();
+    const charsPerPage=2800,count=Math.min(text.length,safePages*charsPerPage);
+    const clipped=text.slice(0,count);
+    const suffix=count<text.length?'\n\n--- FIN DEL ADELANTO GRATIS · DESBLOQUEA PARA CONTINUAR ---\n':'';
+    return new File([`KEYTUBE · ADELANTO GRATIS · ${safePages} PAGINA(S) APROX.
+
+${clipped}${suffix}`],`adelanto-${safePages}-paginas.txt`,{type:'text/plain'});
+  }
+  throw new Error('Para documentos exclusivos usa PDF o TXT.');
 }
 export async function audioPreview(file:File) {
   if(typeof MediaRecorder==='undefined')throw new Error('Usa Chrome o Edge para preparar el adelanto del audio.');

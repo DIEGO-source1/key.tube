@@ -99,6 +99,9 @@ export function ContentCard({
     month: "short",
     year: "numeric",
   });
+  const cardThumbnail = post.type === "image" && post.visibility !== "free"
+    ? (post.preview_url || post.thumbnail_url)
+    : post.thumbnail_url;
   const indexLabel = String(index || 1).padStart(2, "0");
   return (
     <article className="kt-content-card kt-feed-card">
@@ -139,8 +142,8 @@ export function ContentCard({
           onClick={onOpen}
           aria-label={`Abrir ${post.title}`}
         >
-          {post.thumbnail_url ? (
-            <img src={post.thumbnail_url} alt="" loading="lazy" />
+          {cardThumbnail ? (
+            <img className={post.type === "image" && post.visibility !== "free" ? "kt-card-paid-image" : undefined} src={cardThumbnail} alt="" loading="lazy" />
           ) : (
             <span className={`kt-generated-cover ${post.type || "text"}`}>
               <Icon size={54} />
@@ -262,9 +265,10 @@ export function ContentMedia({
         </div>
       </div>
     );
-  if (type === "image")
+  if (type === "image") {
+    const lockedPreview=!full&&post.visibility!=="free";
     return (
-      <div className="kt-photo-view">
+      <div className={`kt-photo-view ${lockedPreview?"kt-photo-locked":""}`}>
         {url || post.thumbnail_url ? (
           <img
             src={url || post.thumbnail_url}
@@ -274,32 +278,33 @@ export function ContentMedia({
         ) : (
           <ImageIcon size={60} />
         )}
+        {lockedPreview&&<div className="kt-photo-lock"><LockKeyhole size={30}/><strong>Vista pixelada</strong><span>Desbloquea para ver la imagen original.</span></div>}
         <span className="kt-player-label">
-          {full ? "Imagen completa" : "Imagen de muestra"}
+          {full ? "Imagen original desbloqueada" : lockedPreview ? "Vista pixelada · requiere membresía" : "Imagen completa"}
         </span>
       </div>
     );
-  if (type === "document")
+  }
+  if (type === "document") {
+    const lockedPreview=!full&&post.visibility!=="free";
+    const frameUrl=url?`${url}#toolbar=0&navpanes=0&view=FitH`:"";
     return (
       <div className="kt-document-view">
         <FileText size={48} />
         <h2>{post.title}</h2>
         <p>
           {full
-            ? "Tu documento completo está disponible."
-            : "Descubre la introducción antes de acceder al documento."}
+            ? "Documento completo desbloqueado."
+            : lockedPreview
+              ? "Estás viendo únicamente las páginas gratuitas que eligió el creador."
+              : "Documento completo disponible."}
         </p>
-        {url && (
-          <Button asChild className="kt-button">
-            <a href={url} download>
-              <Download size={16} />
-              {full ? "Descargar documento" : "Descargar muestra"}
-              <ArrowUpRight size={15} />
-            </a>
-          </Button>
-        )}
+        {url&&<div className="kt-document-frame"><iframe src={frameUrl} title={`Vista de ${post.title}`} onError={onError}/></div>}
+        {lockedPreview&&<div className="kt-document-lock-note"><LockKeyhole size={20}/><span><strong>Fin del adelanto.</strong> Desbloquea la membresía para abrir todas las páginas.</span></div>}
+        {url&&<Button asChild className="kt-button"><a href={url} target="_blank" rel="noreferrer"><Download size={16}/>{full?"Abrir documento completo":"Abrir adelanto en otra pestaña"}<ArrowUpRight size={15}/></a></Button>}
       </div>
     );
+  }
   return (
     <div className="kt-article-cover">
       <FileText size={36} />
