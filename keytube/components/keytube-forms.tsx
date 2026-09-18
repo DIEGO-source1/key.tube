@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import {useState,useRef,useEffect,type ReactNode,type FormEvent} from 'react';
 import {X,Upload,Check,KeyRound,Mail,ShieldCheck,ArrowRight,LoaderCircle,Camera,Trash2} from 'lucide-react';

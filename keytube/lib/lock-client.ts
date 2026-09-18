@@ -22,35 +22,70 @@ export async function prepareWallet(network:number,account:Address) {
   }
   return createWalletClient({account,chain,transport:custom(window.ethereum)});
 }
-export async function deployPlanLock({input,account,onStatus}:{input:{name:string;price:string;durationDays:number;network:number};account:Address;onStatus:(s:string)=>void}) {
-  const wallet=await prepareWallet(input.network,account),client=rpcClient(input.network);
+type DeployPlanInput={name:string;price:string;durationDays:number;network:number};
+type UpdatePlanInput={lock:string;price:string;durationDays:number;network:number;name?:string};
+type StatusFn=(s:string)=>void;
+
+function normalizeDeployArgs(
+  first: DeployPlanInput | {input:DeployPlanInput;account:Address;onStatus:StatusFn},
+  account?: Address,
+  onStatus?: StatusFn,
+) {
+  if ("input" in first) return first;
+  if (!account || !onStatus) throw new Error("Faltan datos para crear el Lock.");
+  return {input:first,account,onStatus};
+}
+
+function normalizeUpdateArgs(
+  first: UpdatePlanInput | {input:UpdatePlanInput;account:Address;onStatus:StatusFn},
+  account?: Address,
+  onStatus?: StatusFn,
+) {
+  if ("input" in first) return first;
+  if (!account || !onStatus) throw new Error("Faltan datos para actualizar el Lock.");
+  return {input:first,account,onStatus};
+}
+
+// Compatibilidad: acepta tanto la firma antigua de 3 argumentos como la nueva de un objeto.
+export async function deployPlanLock(
+  first: DeployPlanInput | {input:DeployPlanInput;account:Address;onStatus:StatusFn},
+  account?: Address,
+  onStatus?: StatusFn,
+) {
+  const {input,account:resolvedAccount,onStatus:resolvedStatus}=normalizeDeployArgs(first,account,onStatus);
+  const wallet=await prepareWallet(input.network,resolvedAccount),client=rpcClient(input.network);
   const {factory}=chainConfig(input.network);
-  const data=encodeFunctionData({abi:manageAbi,functionName:'initialize',args:[account,BigInt(input.durationDays*86400),zeroAddress,parseEther(input.price),BigInt(1000),input.name]});
-  onStatus('Confirma la creación del Lock en tu wallet.');
+  const data=encodeFunctionData({abi:manageAbi,functionName:'initialize',args:[resolvedAccount,BigInt(input.durationDays*86400),zeroAddress,parseEther(input.price),BigInt(1000),input.name]});
+  resolvedStatus('Confirma la creación del Lock en tu wallet.');
   const hash=await wallet.writeContract({address:factory as Address,abi:factoryAbi,functionName:'createUpgradeableLock',args:[data]});
-  onStatus('Esperando la confirmación de la red…');
+  resolvedStatus('Esperando la confirmación de la red…');
   const receipt=await client.waitForTransactionReceipt({hash,timeout:180000});
   if(receipt.status!=='success')throw new Error('La creación del Lock no se completó.');
   for(const log of receipt.logs) {
     if(log.address.toLowerCase()!==factory.toLowerCase())continue;
-    try {const event=decodeEventLog({abi:factoryAbi,data:log.data,topics:log.topics});if(event.eventName==='NewLock'&&event.args.lockOwner.toLowerCase()===account.toLowerCase())return event.args.newLockAddress;}catch{/* Other factory events. */}
+    try {const event=decodeEventLog({abi:factoryAbi,data:log.data,topics:log.topics});if(event.eventName==='NewLock'&&event.args.lockOwner.toLowerCase()===resolvedAccount.toLowerCase())return event.args.newLockAddress;}catch{/* Other factory events. */}
   }
   throw new Error(`Transacción confirmada (${hash}). Copia la dirección del Lock desde Unlock y usa «Vincular Lock».`);
 }
-export async function updatePlanLock({input,account,onStatus}:{input:{lock:string;price:string;durationDays:number;network:number;name?:string};account:Address;onStatus:(s:string)=>void}) {
-  const wallet=await prepareWallet(input.network,account),client=rpcClient(input.network),address=input.lock as Address;
+export async function updatePlanLock(
+  first: UpdatePlanInput | {input:UpdatePlanInput;account:Address;onStatus:StatusFn},
+  account?: Address,
+  onStatus?: StatusFn,
+) {
+  const {input,account:resolvedAccount,onStatus:resolvedStatus}=normalizeUpdateArgs(first,account,onStatus);
+  const wallet=await prepareWallet(input.network,resolvedAccount),client=rpcClient(input.network),address=input.lock as Address;
   const [price,duration,currency]=await Promise.all([
     client.readContract({address,abi:manageAbi,functionName:'keyPrice'}),client.readContract({address,abi:manageAbi,functionName:'expirationDuration'}),client.readContract({address,abi:manageAbi,functionName:'tokenAddress'}),
   ]);
   if(currency!==zeroAddress)throw new Error('Este editor admite planes en ETH o POL, la moneda nativa de la red.');
   if(price!==parseEther(input.price)) {
-    onStatus('Confirma el nuevo precio en tu wallet.');
+    resolvedStatus('Confirma el nuevo precio en tu wallet.');
     const hash=await wallet.writeContract({address,abi:manageAbi,functionName:'updateKeyPricing',args:[parseEther(input.price),zeroAddress]});
     if((await client.waitForTransactionReceipt({hash,timeout:180000})).status!=='success')throw new Error('No se pudo actualizar el precio.');
   }
   if(duration!==BigInt(input.durationDays*86400)) {
     const [max,perAddress]=await Promise.all([client.readContract({address,abi:manageAbi,functionName:'maxNumberOfKeys'}),client.readContract({address,abi:manageAbi,functionName:'maxKeysPerAddress'})]);
-    onStatus('Confirma la nueva duración en tu wallet.');
+    resolvedStatus('Confirma la nueva duración en tu wallet.');
     const hash=await wallet.writeContract({address,abi:manageAbi,functionName:'updateLockConfig',args:[BigInt(input.durationDays*86400),max,perAddress]});
     if((await client.waitForTransactionReceipt({hash,timeout:180000})).status!=='success')throw new Error('No se pudo actualizar la duración.');
   }
