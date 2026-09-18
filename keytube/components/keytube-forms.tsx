@@ -7,12 +7,17 @@ import {deployPlanLock,updatePlanLock} from '@/lib/lock-client';
 import {videoPreview,audioPreview,imagePreview} from '@/lib/preview-client';
 import {upload as uploadBlob} from '@vercel/blob/client';
 import {NETWORK_OPTIONS,CATEGORIES,type CreatorPlan,type ContentType,type Asset,type Draft,type PublicPost} from '@/lib/keytube-types';
+
+type ClientUploadResult={pathname:string};
+type ClientUploadOptions={access:'private'|'public';contentType?:string;handleUploadUrl:string;clientPayload?:string;multipart?:boolean;onUploadProgress?:(event:{percentage:number;loaded?:number;total?:number})=>void};
+const uploadBlobCompat=uploadBlob as unknown as (pathname:string,body:Blob,options:ClientUploadOptions)=>Promise<ClientUploadResult>;
+
 export function Modal({title,onClose,children,wide=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean}) {
   const ref=useRef<HTMLDialogElement>(null);
   useEffect(()=>{ref.current?.showModal();const old=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=old;};},[]);
   return <dialog ref={ref} className={`k2-modal ${wide?'wide':''}`} aria-label={title} onCancel={onClose} onClick={e=>{if(e.target===ref.current)onClose();}}><div className="k2-modal-body"><button className="k2-icon k2-close" onClick={onClose} aria-label="Cerrar"><X size={20}/></button>{children}</div></dialog>;
 }
-export function AuthForm({googleEnabled,recoveryEnabled,onSuccess}:{googleEnabled:boolean;recoveryEnabled:boolean;onSuccess:()=>void}) {
+export function AuthForm({googleEnabled,recoveryEnabled=true,onSuccess}:{googleEnabled:boolean;recoveryEnabled?:boolean;onSuccess:()=>void}) {
   const [mode,setMode]=useState<'login'|'register'|'recovery'|'recovery-code'>('login'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[recoveryEmail,setRecoveryEmail]=useState(''),[flow,setFlow]=useState('');
   const clearMessages=()=>{setError('');setNotice('');};
   async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=new FormData(e.currentTarget);setBusy(true);clearMessages();try{await api(`/api/auth/${mode}`,{name:data.get('name')||undefined,email:data.get('email'),password:data.get('password')});onSuccess();}catch(e){setError(errorText(e));}finally{setBusy(false);}}
@@ -50,7 +55,10 @@ export function PlanEditor({slot,existing,sibling,onSaved}:{slot:'basic'|'premiu
     setStatus('Detectando la red y leyendo los datos reales del Lock…');
     let preferredNetwork=network;
     try { preferredNetwork=await walletNetwork(); } catch {}
-    const {inspection}=await api<{inspection:Inspection}>('/api/plans',{lock:address,preferredNetwork},'PUT');
+    const response=await fetch('/api/plans',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({lock:address,preferredNetwork}),cache:'no-store'});
+    const payload=await response.json() as {inspection?:Inspection;error?:string};
+    if(!response.ok||!payload.inspection)throw new Error(payload.error||'No se pudo leer el Lock.');
+    const inspection=payload.inspection;
     if(sibling&&sibling.network!==inspection.network)throw new Error(`Ese Lock está en ${inspection.networkName}, pero tu otro plan usa otra red.`);
     setNetwork(inspection.network);
     setPrice(inspection.price);
@@ -66,13 +74,13 @@ export function PlanEditor({slot,existing,sibling,onSaved}:{slot:'basic'|'premiu
     let address=lock.trim(),selectedNetwork=network,selectedPrice=price,selectedDays=days;
     if(!address&&!importing){
       if(!selectedPrice)throw new Error('Escribe el precio del plan.');
-      address=await deployPlanLock({name,price:selectedPrice,durationDays:selectedDays,network:selectedNetwork},wallet,setStatus);
+      address=await deployPlanLock({input:{name,price:selectedPrice,durationDays:selectedDays,network:selectedNetwork},account:wallet,onStatus:setStatus});
       setLock(address);setImporting(true);
     } else if(importing&&!existing) {
       const inspection=await inspectLock(address);
       selectedNetwork=inspection.network;selectedPrice=inspection.price;selectedDays=inspection.durationDays;
     } else if(existing) {
-      await updatePlanLock({name,price:selectedPrice,durationDays:selectedDays,network:selectedNetwork,lock:address},wallet,setStatus);
+      await updatePlanLock({input:{name,price:selectedPrice,durationDays:selectedDays,network:selectedNetwork,lock:address},account:wallet,onStatus:setStatus});
     }
     if(!/^0x[0-9a-fA-F]{40}$/.test(address))throw new Error('Escribe la dirección del Lock o crea uno nuevo.');
     const plan={slot,name,description,benefits:benefits.split('\n').map(x=>x.trim()).filter(Boolean),coverage,price:selectedPrice,durationDays:selectedDays,network:selectedNetwork,lock:address};
@@ -185,7 +193,7 @@ export function Publisher({creator,plans,onPublished}:{creator:string;plans:Crea
     const pathname=`keytube/full/${assetId}.${ext}`;
     setStatus('Subiendo archivo completo: 0%');
     const safeName=(f.name||'archivo').replace(/[\r\n\x00-\x1f]/g,'').slice(0,150)||'archivo';
-    const blob=await uploadBlob(pathname,f,{access:'private',contentType:mime,handleUploadUrl:'/api/blob-upload',clientPayload:JSON.stringify({assetId,name:safeName,mime,size:f.size}),multipart:f.size>100*1024*1024,onUploadProgress:({percentage})=>setStatus(`Subiendo archivo completo: ${Math.round(percentage)}%`)});
+    const blob=await uploadBlobCompat(pathname,f,{access:'private',contentType:mime,handleUploadUrl:'/api/blob-upload',clientPayload:JSON.stringify({assetId,name:safeName,mime,size:f.size}),multipart:f.size>100*1024*1024,onUploadProgress:({percentage})=>setStatus(`Subiendo archivo completo: ${Math.round(percentage)}%`)});
     const result=await api<{asset:Asset}>('/api/blob-upload/finalize',{assetId,pathname:blob.pathname,name:safeName,mime,size:f.size});
     return result.asset.id;
   }

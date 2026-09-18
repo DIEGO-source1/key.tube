@@ -47,6 +47,9 @@
     "actualizar-keytube-sepolia",
     "actualizar-keytube-video",
     "KeyTube-arranque-estable",
-    "KeyTube-arranque-v2"
+    "KeyTube-arranque-v2",
+    "respaldo",
+    "../respaldo",
+    "**/respaldo/**"
   ]
 }

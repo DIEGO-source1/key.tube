@@ -22,7 +22,7 @@ export async function prepareWallet(network:number,account:Address) {
   }
   return createWalletClient({account,chain,transport:custom(window.ethereum)});
 }
-export async function deployPlanLock(input:{name:string;price:string;durationDays:number;network:number},account:Address,onStatus:(s:string)=>void) {
+export async function deployPlanLock({input,account,onStatus}:{input:{name:string;price:string;durationDays:number;network:number};account:Address;onStatus:(s:string)=>void}) {
   const wallet=await prepareWallet(input.network,account),client=rpcClient(input.network);
   const {factory}=chainConfig(input.network);
   const data=encodeFunctionData({abi:manageAbi,functionName:'initialize',args:[account,BigInt(input.durationDays*86400),zeroAddress,parseEther(input.price),BigInt(1000),input.name]});
@@ -37,7 +37,7 @@ export async function deployPlanLock(input:{name:string;price:string;durationDay
   }
   throw new Error(`Transacción confirmada (${hash}). Copia la dirección del Lock desde Unlock y usa «Vincular Lock».`);
 }
-export async function updatePlanLock(input:{lock:string;price:string;durationDays:number;network:number;name?:string},account:Address,onStatus:(s:string)=>void) {
+export async function updatePlanLock({input,account,onStatus}:{input:{lock:string;price:string;durationDays:number;network:number;name?:string};account:Address;onStatus:(s:string)=>void}) {
   const wallet=await prepareWallet(input.network,account),client=rpcClient(input.network),address=input.lock as Address;
   const [price,duration,currency]=await Promise.all([
     client.readContract({address,abi:manageAbi,functionName:'keyPrice'}),client.readContract({address,abi:manageAbi,functionName:'expirationDuration'}),client.readContract({address,abi:manageAbi,functionName:'tokenAddress'}),
